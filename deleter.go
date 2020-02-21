@@ -15,8 +15,9 @@ import (
 	"time"
 )
 
-const facebookUrl string = "https://mbasic.facebook.com/profile"
+const facebookUrl string = "https://mbasic.facebook.com"
 const facebookLoginUrl string = "https://mbasic.facebook.com/login/device-based/regular/login/"
+const profileUrl string = "https://mbasic.facebook.com/profile"
 const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
 type requester struct {
@@ -96,7 +97,7 @@ func (fbl *fbLogin) Login() {
 }
 
 func (fbl *fbLogin) IsLoggedIn() bool {
-	output := fbl.requester.Request(facebookUrl)
+	output := fbl.requester.Request(profileUrl)
 	if strings.Contains(output, `name="sign_up"`) {
 		return false
 	}
@@ -124,17 +125,42 @@ type activityReader struct {
 }
 
 func (actRead *activityReader) readItems(year int, month int) {
-	requestUrl := CreateRequestUrl(year, month, actRead.fbl.profileId)
+	requestUrl, sectionIdStr := CreateRequestUrl(year, month, actRead.fbl.profileId)
 	fmt.Println(requestUrl)
+	output := actRead.req.Request(requestUrl)
+	moreCounter := 1
+	var searchString string
+	for {
+		searchString = sectionIdStr + `_more_` + strconv.Itoa(moreCounter)
+		// fmt.Println(output)
+		if !strings.Contains(output, searchString) {
+			break
+		}
+		actRead.storeItemsFromOutput(output)
+
+		requestUrl = strings.SplitAfter(output, searchString)[0]
+		splitResult := strings.Split(requestUrl, `<a href="`)
+		requestUrl = facebookUrl + splitResult[len(splitResult)-1]
+		requestUrl = strings.Replace(requestUrl, "&amp;", "&", -1)
+		fmt.Println(requestUrl)
+		output = actRead.req.Request(requestUrl)
+		moreCounter += 1
+	}
 }
 
-func CreateRequestUrl(year int, month int, profileId string) string {
+func (actRead *activityReader) storeItemsFromOutput(htmlOutput string) {
+
+}
+
+func CreateRequestUrl(year int, month int, profileId string) (string, string) {
+	sectionIdStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
 	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
+	// TODO variable category key
 	newUrl += "?category_key=tagsbyotherscluster"
 	newUrl += "&timeend=" + ToUnixTime(year, month+1, 1)
 	newUrl += "&timestart=" + ToUnixTime(year, month, 0)
-	newUrl += "&sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
-	return newUrl
+	newUrl += "&" + sectionIdStr
+	return newUrl, sectionIdStr
 }
 
 func ToUnixTime(year int, month int, decrement int64) string {
@@ -148,6 +174,6 @@ func main() {
 	fbl := NewFbLogin(req)
 	actRead := activityReader{req, fbl}
 	actRead.readItems(2020, 2)
-	actRead.readItems(2020, 1)
-	actRead.readItems(2011, 5)
+	// actRead.readItems(2020, 1)
+	// actRead.readItems(2011, 5)
 }
