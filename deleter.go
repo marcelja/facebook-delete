@@ -126,30 +126,27 @@ type activityReader struct {
 
 func (actRead *activityReader) readItems(year int, month int) {
 	requestUrl, sectionIdStr := CreateRequestUrl(year, month, actRead.fbl.profileId)
-	fmt.Println(requestUrl)
 	output := actRead.req.Request(requestUrl)
+
 	moreCounter := 1
 	var searchString string
 	for {
 		searchString = sectionIdStr + `_more_` + strconv.Itoa(moreCounter)
-		// fmt.Println(output)
 		if !strings.Contains(output, searchString) {
 			break
 		}
 		actRead.storeItemsFromOutput(output)
 
 		requestUrl = strings.SplitAfter(output, searchString)[0]
-		splitResult := strings.Split(requestUrl, `<a href="`)
-		requestUrl = facebookUrl + splitResult[len(splitResult)-1]
+		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
 		requestUrl = strings.Replace(requestUrl, "&amp;", "&", -1)
-		fmt.Println(requestUrl)
 		output = actRead.req.Request(requestUrl)
 		moreCounter += 1
 	}
 }
 
 func (actRead *activityReader) storeItemsFromOutput(htmlOutput string) {
-
+	fmt.Println(htmlOutput)
 }
 
 func CreateRequestUrl(year int, month int, profileId string) (string, string) {
