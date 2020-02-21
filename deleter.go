@@ -120,8 +120,9 @@ func PrintUserName(output string) {
 }
 
 type activityReader struct {
-	req *requester
-	fbl *fbLogin
+	req        *requester
+	fbl        *fbLogin
+	deleteUrls []string
 }
 
 func (actRead *activityReader) readItems(year int, month int) {
@@ -139,21 +140,44 @@ func (actRead *activityReader) readItems(year int, month int) {
 
 		requestUrl = strings.SplitAfter(output, searchString)[0]
 		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
+		// TODO move to requester
 		requestUrl = strings.Replace(requestUrl, "&amp;", "&", -1)
 		output = actRead.req.Request(requestUrl)
 		moreCounter += 1
 	}
 }
 
-func (actRead *activityReader) storeItemsFromOutput(htmlOutput string) {
-	fmt.Println(htmlOutput)
+func (actRead *activityReader) storeItemsFromOutput(out string) {
+	token := "action=unlike"
+	// token := "deletion_request_id"
+	var match int
+	var from int
+	var to int
+
+	for {
+		match = strings.Index(out, token)
+		if match == -1 {
+			break
+		}
+		from = strings.LastIndex(out[:match], `"`) + 1
+		to = match + strings.Index(out[match:], `"`)
+		actRead.deleteUrls = append(actRead.deleteUrls, facebookUrl+out[from:to])
+		out = out[to:]
+	}
+}
+
+func (actRead *activityReader) readYear(year int) {
+	for i := 1;  i<=12; i++ {
+		actRead.readItems(year, i)
+		fmt.Println("Number of delete urls in slice:", len(actRead.deleteUrls))
+	}
 }
 
 func CreateRequestUrl(year int, month int, profileId string) (string, string) {
 	sectionIdStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
 	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
 	// TODO variable category key
-	newUrl += "?category_key=tagsbyotherscluster"
+	newUrl += "?category_key=likes"
 	newUrl += "&timeend=" + ToUnixTime(year, month+1, 1)
 	newUrl += "&timestart=" + ToUnixTime(year, month, 0)
 	newUrl += "&" + sectionIdStr
@@ -169,8 +193,10 @@ func ToUnixTime(year int, month int, decrement int64) string {
 func main() {
 	req := NewRequester()
 	fbl := NewFbLogin(req)
-	actRead := activityReader{req, fbl}
-	actRead.readItems(2020, 2)
+	actRead := activityReader{req, fbl, make([]string, 0)}
+	// actRead.readItems(2020, 2)
+	actRead.readYear(2011)
+	// fmt.Println(actRead.deleteUrls)
 	// actRead.readItems(2020, 1)
 	// actRead.readItems(2011, 5)
 }
