@@ -10,11 +10,14 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 const facebookUrl string = "https://mbasic.facebook.com/profile"
 const facebookLoginUrl string = "https://mbasic.facebook.com/login/device-based/regular/login/"
+const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
 type requester struct {
 	client *http.Client
@@ -54,6 +57,7 @@ type fbLogin struct {
 	requester *requester
 	email     string
 	password  string
+	profileId string
 }
 
 func NewFbLogin(req *requester) *fbLogin {
@@ -97,7 +101,15 @@ func (fbl *fbLogin) IsLoggedIn() bool {
 		return false
 	}
 	PrintUserName(output)
+	fbl.StoreProfileId(output)
 	return true
+}
+
+func (fbl *fbLogin) StoreProfileId(output string) {
+	result := strings.Split(output, ";profile_id=")[1]
+	result = strings.Split(result, "&amp;")[0]
+	fbl.profileId = result
+	fmt.Println("Profile ID:", fbl.profileId)
 }
 
 func PrintUserName(output string) {
@@ -106,7 +118,36 @@ func PrintUserName(output string) {
 	fmt.Println("Logged in with user:", result)
 }
 
+type activityReader struct {
+	req *requester
+	fbl *fbLogin
+}
+
+func (actRead *activityReader) readItems(year int, month int) {
+	requestUrl := CreateRequestUrl(year, month, actRead.fbl.profileId)
+	fmt.Println(requestUrl)
+}
+
+func CreateRequestUrl(year int, month int, profileId string) string {
+	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
+	newUrl += "?category_key=tagsbyotherscluster"
+	newUrl += "&timeend=" + ToUnixTime(year, month+1, 1)
+	newUrl += "&timestart=" + ToUnixTime(year, month, 0)
+	newUrl += "&sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
+	return newUrl
+}
+
+func ToUnixTime(year int, month int, decrement int64) string {
+	location, _ := time.LoadLocation("America/Los_Angeles")
+	timestamp := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, location)
+	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
+}
+
 func main() {
 	req := NewRequester()
-	NewFbLogin(req)
+	fbl := NewFbLogin(req)
+	actRead := activityReader{req, fbl}
+	actRead.readItems(2020, 2)
+	actRead.readItems(2020, 1)
+	actRead.readItems(2011, 5)
 }
