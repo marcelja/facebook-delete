@@ -33,13 +33,19 @@ func NewRequester() *requester {
 }
 
 func (r *requester) Request(requestUrl string) string {
+	requestUrl = UpdateUrl(requestUrl)
 	resp, err := r.client.Get(requestUrl)
 	return RetrieveRequestString(resp, err)
 }
 
 func (r *requester) RequestPostForm(requestUrl string, form url.Values) string {
+	requestUrl = UpdateUrl(requestUrl)
 	resp, err := r.client.PostForm(requestUrl, form)
 	return RetrieveRequestString(resp, err)
+}
+
+func UpdateUrl(requestUrl string) string {
+	return strings.Replace(requestUrl, "&amp;", "&", -1)
 }
 
 func RetrieveRequestString(resp *http.Response, err error) string {
@@ -140,8 +146,6 @@ func (actRead *activityReader) readItems(year int, month int) {
 
 		requestUrl = strings.SplitAfter(output, searchString)[0]
 		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
-		// TODO move to requester
-		requestUrl = strings.Replace(requestUrl, "&amp;", "&", -1)
 		output = actRead.req.Request(requestUrl)
 		moreCounter += 1
 	}
