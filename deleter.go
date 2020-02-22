@@ -4,6 +4,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/AlecAivazis/survey"
 	cookiejar "github.com/juju/persistent-cookiejar"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
@@ -19,6 +20,9 @@ const facebookUrl string = "https://mbasic.facebook.com"
 const facebookLoginUrl string = "https://mbasic.facebook.com/login/device-based/regular/login/"
 const profileUrl string = "https://mbasic.facebook.com/profile"
 const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
+
+var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
+var categoryOptions = []string{"Likes", "Comments"}
 
 type requester struct {
 	client *http.Client
@@ -171,7 +175,7 @@ func (actRead *activityReader) storeItemsFromOutput(out string) {
 }
 
 func (actRead *activityReader) readYear(year int) {
-	for i := 1;  i<=12; i++ {
+	for i := 1; i <= 12; i++ {
 		actRead.readItems(year, i)
 		fmt.Println("Number of delete urls in slice:", len(actRead.deleteUrls))
 	}
@@ -194,12 +198,31 @@ func ToUnixTime(year int, month int, decrement int64) string {
 	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
 }
 
+func CreateMultiSelect(yearsOrCategories string, options []string) *[]string {
+	selected := []string{}
+	survey.MultiSelectQuestionTemplate = strings.Replace(survey.MultiSelectQuestionTemplate, "enter to select, type to filter", "space to select, type to filter, enter to continue", 1)
+	prompt := &survey.MultiSelect{
+		Message: "Which " + yearsOrCategories + " do you want to delete from:",
+		Options: options,
+		PageSize: 20,
+	}
+	survey.AskOne(prompt, &selected)
+	return &selected
+}
+
 func main() {
 	req := NewRequester()
 	fbl := NewFbLogin(req)
 	actRead := activityReader{req, fbl, make([]string, 0)}
+
+	years := CreateMultiSelect("years", yearOptions)
+	categories := CreateMultiSelect("categories", categoryOptions)
+	fmt.Println(years)
+	fmt.Println(categories)
+	panic("asdf")
 	// actRead.readItems(2020, 2)
-	actRead.readYear(2011)
+	actRead.readItems(2011, 8)
+	req.Request(actRead.deleteUrls[0])
 	// fmt.Println(actRead.deleteUrls)
 	// actRead.readItems(2020, 1)
 	// actRead.readItems(2011, 5)
