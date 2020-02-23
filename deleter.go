@@ -153,6 +153,7 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 			break
 		}
 		actRead.StoreItemsFromOutput(output)
+		actRead.UpdateOutputRead(month)
 
 		requestUrl = strings.SplitAfter(output, searchString)[0]
 		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
@@ -200,7 +201,6 @@ func (actRead *activityReader) ReadYearsAndCategories(years []string, categories
 			actRead.UpdateOutputRead(i)
 			for _, category := range categories {
 				actRead.ReadItems(yearInt, i, category)
-				actRead.UpdateOutputRead(i)
 			}
 		}
 		fmt.Println("")
