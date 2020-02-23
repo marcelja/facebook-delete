@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/AlecAivazis/survey"
+	"github.com/cheggaaa/pb/v3"
 	"github.com/juju/persistent-cookiejar"
 	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
@@ -24,10 +25,10 @@ const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
 var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 var categoriesMap = map[string]string{
-	"Comments": "commentscluster",
-	"Posts": "statuscluster",
+	"Comments":            "commentscluster",
+	"Posts":               "statuscluster",
 	"Likes and Reactions": "likes",
-	"Search History": "search",
+	"Search History":      "search",
 }
 
 type requester struct {
@@ -193,20 +194,6 @@ func (actRead *activityReader) UpdateOutputRead(month int) {
 	fmt.Printf(str)
 }
 
-func (actRead *activityReader) ReadYearsAndCategories(years []string, categories []string) {
-	for _, year := range years {
-		fmt.Println("Searching elements from " + year + ":")
-		yearInt, _ := strconv.Atoi(year)
-		for i := 1; i <= 12; i++ {
-			actRead.UpdateOutputRead(i)
-			for _, category := range categories {
-				actRead.ReadItems(yearInt, i, category)
-			}
-		}
-		fmt.Println("")
-	}
-}
-
 func CreateRequestUrl(year int, month int, profileId string, category string) (string, string) {
 	sectionIdStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
 	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
@@ -241,6 +228,26 @@ func categorySlice() []string {
 		keys = append(keys, key)
 	}
 	return keys
+}
+
+func (actRead *activityReader) ReadYearsAndCategories(years []string, categories []string) {
+	for _, year := range years {
+		fmt.Println("Searching elements from " + year + ":")
+		yearInt, _ := strconv.Atoi(year)
+		for i := 1; i <= 12; i++ {
+			actRead.UpdateOutputRead(i)
+			for _, category := range categories {
+				actRead.ReadItems(yearInt, i, category)
+			}
+		}
+		fmt.Println("")
+		bar := pb.Full.Start(len(actRead.deleteUrls))
+		for _, deleteUrl := range actRead.deleteUrls {
+			actRead.req.Request(deleteUrl)
+			bar.Increment()
+		}
+		bar.Finish()
+	}
 }
 
 func main() {
