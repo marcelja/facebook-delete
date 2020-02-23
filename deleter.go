@@ -17,10 +17,10 @@ import (
 	"time"
 )
 
-const facebookUrl string = "https://mbasic.facebook.com"
-const facebookLoginUrl string = "https://mbasic.facebook.com/login/device-based/regular/login/"
-const profileUrl string = "https://mbasic.facebook.com/profile"
-const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
+const facebookURL string = "https://mbasic.facebook.com"
+const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/regular/login/"
+const profileURL string = "https://mbasic.facebook.com/profile"
+const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
 var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
@@ -36,30 +36,30 @@ type requester struct {
 	jar    *cookiejar.Jar
 }
 
-func NewRequester() *requester {
+func newRequester() *requester {
 	req := new(requester)
 	req.jar, _ = cookiejar.New(&cookiejar.Options{})
 	req.client = &http.Client{Jar: req.jar}
 	return req
 }
 
-func (r *requester) Request(requestUrl string) string {
-	requestUrl = UpdateUrl(requestUrl)
-	resp, err := r.client.Get(requestUrl)
-	return RetrieveRequestString(resp, err)
+func (r *requester) Request(requestURL string) string {
+	requestURL = updateURL(requestURL)
+	resp, err := r.client.Get(requestURL)
+	return retrieveRequestString(resp, err)
 }
 
-func (r *requester) RequestPostForm(requestUrl string, form url.Values) string {
-	requestUrl = UpdateUrl(requestUrl)
-	resp, err := r.client.PostForm(requestUrl, form)
-	return RetrieveRequestString(resp, err)
+func (r *requester) RequestPostForm(requestURL string, form url.Values) string {
+	requestURL = updateURL(requestURL)
+	resp, err := r.client.PostForm(requestURL, form)
+	return retrieveRequestString(resp, err)
 }
 
-func UpdateUrl(requestUrl string) string {
-	return strings.Replace(requestUrl, "&amp;", "&", -1)
+func updateURL(requestURL string) string {
+	return strings.Replace(requestURL, "&amp;", "&", -1)
 }
 
-func RetrieveRequestString(resp *http.Response, err error) string {
+func retrieveRequestString(resp *http.Response, err error) string {
 	if err != nil {
 		fmt.Println("error during http request")
 	}
@@ -75,10 +75,10 @@ type fbLogin struct {
 	requester *requester
 	email     string
 	password  string
-	profileId string
+	profileID string
 }
 
-func NewFbLogin(req *requester) *fbLogin {
+func newFbLogin(req *requester) *fbLogin {
 	fbl := new(fbLogin)
 	fbl.requester = req
 
@@ -110,55 +110,55 @@ func (fbl *fbLogin) Login() {
 		"pass":  {fbl.password},
 		"login": {"Log In"},
 	}
-	fbl.requester.RequestPostForm(facebookLoginUrl, form)
+	fbl.requester.RequestPostForm(facebookLoginURL, form)
 }
 
 func (fbl *fbLogin) IsLoggedIn() bool {
-	output := fbl.requester.Request(profileUrl)
+	output := fbl.requester.Request(profileURL)
 	if strings.Contains(output, `name="sign_up"`) {
 		return false
 	}
-	fbl.StoreProfileId(output)
+	fbl.StoreProfileID(output)
 	fbl.PrintUserName(output)
 	return true
 }
 
-func (fbl *fbLogin) StoreProfileId(output string) {
+func (fbl *fbLogin) StoreProfileID(output string) {
 	result := strings.Split(output, ";profile_id=")[1]
 	result = strings.Split(result, "&amp;")[0]
-	fbl.profileId = result
+	fbl.profileID = result
 }
 
 func (fbl *fbLogin) PrintUserName(output string) {
 	result := strings.Split(output, `<title>`)[1]
 	result = strings.Split(result, `</title`)[0]
-	fmt.Println("Logged in with user:", result, "(profile ID:", fbl.profileId + ")")
+	fmt.Println("Logged in with user:", result, "(profile ID:", fbl.profileID+")")
 }
 
 type activityReader struct {
 	req        *requester
 	fbl        *fbLogin
-	deleteUrls []string
+	deleteURLs []string
 }
 
 func (actRead *activityReader) ReadItems(year int, month int, category string) {
-	requestUrl, sectionIdStr := CreateRequestUrl(year, month, actRead.fbl.profileId, category)
-	output := actRead.req.Request(requestUrl)
+	requestURL, sectionIDStr := createRequestURL(year, month, actRead.fbl.profileID, category)
+	output := actRead.req.Request(requestURL)
 
 	moreCounter := 1
 	var searchString string
 	for {
-		searchString = sectionIdStr + `_more_` + strconv.Itoa(moreCounter)
+		searchString = sectionIDStr + `_more_` + strconv.Itoa(moreCounter)
 		if !strings.Contains(output, searchString) {
 			break
 		}
 		actRead.StoreItemsFromOutput(output)
 		actRead.UpdateOutputRead(month)
 
-		requestUrl = strings.SplitAfter(output, searchString)[0]
-		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
-		output = actRead.req.Request(requestUrl)
-		moreCounter += 1
+		requestURL = strings.SplitAfter(output, searchString)[0]
+		requestURL = facebookURL + requestURL[strings.LastIndex(requestURL, `"`)+1:]
+		output = actRead.req.Request(requestURL)
+		moreCounter++
 	}
 }
 
@@ -176,7 +176,7 @@ func (actRead *activityReader) StoreItemsFromOutput(out string) {
 		}
 		from = strings.LastIndex(out[:match], `"`) + 1
 		to = match + strings.Index(out[match:], `"`)
-		actRead.deleteUrls = append(actRead.deleteUrls, facebookUrl+out[from:to])
+		actRead.deleteURLs = append(actRead.deleteURLs, facebookURL+out[from:to])
 		out = out[to:]
 	}
 }
@@ -189,27 +189,27 @@ func (actRead *activityReader) UpdateOutputRead(month int) {
 			str += "    "
 		}
 	}
-	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteUrls))
+	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteURLs))
 	fmt.Printf(str)
 }
 
-func CreateRequestUrl(year int, month int, profileId string, category string) (string, string) {
-	sectionIdStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
-	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
-	newUrl += "?category_key=" + categoriesMap[category]
-	newUrl += "&timeend=" + ToUnixTime(year, month+1, 1)
-	newUrl += "&timestart=" + ToUnixTime(year, month, 0)
-	newUrl += "&" + sectionIdStr
-	return newUrl, sectionIdStr
+func createRequestURL(year int, month int, profileID string, category string) (string, string) {
+	sectionIDStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
+	newURL := strings.Replace(activityURL, "<profileid>", profileID, 1)
+	newURL += "?category_key=" + categoriesMap[category]
+	newURL += "&timeend=" + toUnixTime(year, month+1, 1)
+	newURL += "&timestart=" + toUnixTime(year, month, 0)
+	newURL += "&" + sectionIDStr
+	return newURL, sectionIDStr
 }
 
-func ToUnixTime(year int, month int, decrement int64) string {
+func toUnixTime(year int, month int, decrement int64) string {
 	location, _ := time.LoadLocation("America/Los_Angeles")
 	timestamp := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, location)
 	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
 }
 
-func CreateMultiSelect(yearsOrCategories string, options []string) []string {
+func createMultiSelect(yearsOrCategories string, options []string) []string {
 	selected := []string{}
 	survey.MultiSelectQuestionTemplate = strings.Replace(survey.MultiSelectQuestionTemplate, "enter to select, type to filter", "space to select, type to filter, enter to continue", 1)
 	prompt := &survey.MultiSelect{
@@ -223,7 +223,7 @@ func CreateMultiSelect(yearsOrCategories string, options []string) []string {
 
 func categorySlice() []string {
 	keys := []string{}
-	for key, _ := range categoriesMap {
+	for key := range categoriesMap {
 		keys = append(keys, key)
 	}
 	return keys
@@ -239,10 +239,10 @@ func (actRead *activityReader) ReadYearsAndCategories(years []string, categories
 				actRead.ReadItems(yearInt, i, category)
 			}
 		}
-		fmt.Println("\nDeleting elements:")
-		bar := pb.Full.Start(len(actRead.deleteUrls))
-		for _, deleteUrl := range actRead.deleteUrls {
-			actRead.req.Request(deleteUrl)
+		fmt.Println("\nDeleting elements: from " + year + ":")
+		bar := pb.Full.Start(len(actRead.deleteURLs))
+		for _, deleteURL := range actRead.deleteURLs {
+			actRead.req.Request(deleteURL)
 			bar.Increment()
 		}
 		bar.Finish()
@@ -250,11 +250,11 @@ func (actRead *activityReader) ReadYearsAndCategories(years []string, categories
 }
 
 func main() {
-	req := NewRequester()
-	fbl := NewFbLogin(req)
+	req := newRequester()
+	fbl := newFbLogin(req)
 	actRead := activityReader{req, fbl, make([]string, 0)}
 
-	years := CreateMultiSelect("years", yearOptions)
-	categories := CreateMultiSelect("categories", categorySlice())
+	years := createMultiSelect("years", yearOptions)
+	categories := createMultiSelect("categories", categorySlice())
 	actRead.ReadYearsAndCategories(years, categories)
 }
