@@ -22,6 +22,7 @@ const profileUrl string = "https://mbasic.facebook.com/profile"
 const activityUrl string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
 var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
+var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 var categoriesMap = map[string]string{
 	"Comments": "commentscluster",
 	"Posts": "statuscluster",
@@ -140,8 +141,8 @@ type activityReader struct {
 	deleteUrls []string
 }
 
-func (actRead *activityReader) readItems(year int, month int) {
-	requestUrl, sectionIdStr := CreateRequestUrl(year, month, actRead.fbl.profileId)
+func (actRead *activityReader) ReadItems(year int, month int, category string) {
+	requestUrl, sectionIdStr := CreateRequestUrl(year, month, actRead.fbl.profileId, category)
 	output := actRead.req.Request(requestUrl)
 
 	moreCounter := 1
@@ -151,7 +152,7 @@ func (actRead *activityReader) readItems(year int, month int) {
 		if !strings.Contains(output, searchString) {
 			break
 		}
-		actRead.storeItemsFromOutput(output)
+		actRead.StoreItemsFromOutput(output)
 
 		requestUrl = strings.SplitAfter(output, searchString)[0]
 		requestUrl = facebookUrl + requestUrl[strings.LastIndex(requestUrl, `"`)+1:]
@@ -160,7 +161,7 @@ func (actRead *activityReader) readItems(year int, month int) {
 	}
 }
 
-func (actRead *activityReader) storeItemsFromOutput(out string) {
+func (actRead *activityReader) StoreItemsFromOutput(out string) {
 	token := "action=unlike"
 	// token := "deletion_request_id"
 	var match int
@@ -178,19 +179,38 @@ func (actRead *activityReader) storeItemsFromOutput(out string) {
 		out = out[to:]
 	}
 }
+func (actRead *activityReader) UpdateOutputRead(month int) {
+	str := "\r"
+	for i, monthString := range monthStrings {
+		if month > i {
+			str += monthString + " "
+		} else {
+			str += "    "
+		}
+	}
+	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteUrls))
+	fmt.Printf(str)
+}
 
-func (actRead *activityReader) readYear(year int) {
-	for i := 1; i <= 12; i++ {
-		actRead.readItems(year, i)
-		fmt.Println("Number of delete urls in slice:", len(actRead.deleteUrls))
+func (actRead *activityReader) ReadYearsAndCategories(years []string, categories []string) {
+	for _, year := range years {
+		fmt.Println("Searching elements from " + year + ":")
+		yearInt, _ := strconv.Atoi(year)
+		for i := 1; i <= 12; i++ {
+			actRead.UpdateOutputRead(i)
+			for _, category := range categories {
+				actRead.ReadItems(yearInt, i, category)
+				actRead.UpdateOutputRead(i)
+			}
+		}
+		fmt.Println("")
 	}
 }
 
-func CreateRequestUrl(year int, month int, profileId string) (string, string) {
+func CreateRequestUrl(year int, month int, profileId string, category string) (string, string) {
 	sectionIdStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
 	newUrl := strings.Replace(activityUrl, "<profileid>", profileId, 1)
-	// TODO variable category key
-	newUrl += "?category_key=likes"
+	newUrl += "?category_key=" + categoriesMap[category]
 	newUrl += "&timeend=" + ToUnixTime(year, month+1, 1)
 	newUrl += "&timestart=" + ToUnixTime(year, month, 0)
 	newUrl += "&" + sectionIdStr
@@ -203,24 +223,24 @@ func ToUnixTime(year int, month int, decrement int64) string {
 	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
 }
 
-func CreateMultiSelect(yearsOrCategories string, options *[]string) *[]string {
+func CreateMultiSelect(yearsOrCategories string, options []string) []string {
 	selected := []string{}
 	survey.MultiSelectQuestionTemplate = strings.Replace(survey.MultiSelectQuestionTemplate, "enter to select, type to filter", "space to select, type to filter, enter to continue", 1)
 	prompt := &survey.MultiSelect{
 		Message:  "Which " + yearsOrCategories + " do you want to delete from:",
-		Options:  *options,
+		Options:  options,
 		PageSize: 20,
 	}
 	survey.AskOne(prompt, &selected)
-	return &selected
+	return selected
 }
 
-func categorySlice() *[]string {
+func categorySlice() []string {
 	keys := []string{}
 	for key, _ := range categoriesMap {
 		keys = append(keys, key)
 	}
-	return &keys
+	return keys
 }
 
 func main() {
@@ -228,16 +248,7 @@ func main() {
 	fbl := NewFbLogin(req)
 	actRead := activityReader{req, fbl, make([]string, 0)}
 
-	years := CreateMultiSelect("years", &yearOptions)
+	years := CreateMultiSelect("years", yearOptions)
 	categories := CreateMultiSelect("categories", categorySlice())
-
-	fmt.Println(years)
-	fmt.Println(categories)
-	panic("asdf")
-	// actRead.readItems(2020, 2)
-	actRead.readItems(2011, 8)
-	req.Request(actRead.deleteUrls[0])
-	// fmt.Println(actRead.deleteUrls)
-	// actRead.readItems(2020, 1)
-	// actRead.readItems(2011, 5)
+	actRead.ReadYearsAndCategories(years, categories)
 }
