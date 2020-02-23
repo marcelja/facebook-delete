@@ -118,8 +118,8 @@ func (fbl *fbLogin) IsLoggedIn() bool {
 	if strings.Contains(output, `name="sign_up"`) {
 		return false
 	}
-	PrintUserName(output)
 	fbl.StoreProfileId(output)
+	fbl.PrintUserName(output)
 	return true
 }
 
@@ -127,13 +127,12 @@ func (fbl *fbLogin) StoreProfileId(output string) {
 	result := strings.Split(output, ";profile_id=")[1]
 	result = strings.Split(result, "&amp;")[0]
 	fbl.profileId = result
-	fmt.Println("Profile ID:", fbl.profileId)
 }
 
-func PrintUserName(output string) {
+func (fbl *fbLogin) PrintUserName(output string) {
 	result := strings.Split(output, `<title>`)[1]
 	result = strings.Split(result, `</title`)[0]
-	fmt.Println("Logged in with user:", result)
+	fmt.Println("Logged in with user:", result, "(profile ID:", fbl.profileId + ")")
 }
 
 type activityReader struct {
@@ -240,7 +239,7 @@ func (actRead *activityReader) ReadYearsAndCategories(years []string, categories
 				actRead.ReadItems(yearInt, i, category)
 			}
 		}
-		fmt.Println("")
+		fmt.Println("\nDeleting elements:")
 		bar := pb.Full.Start(len(actRead.deleteUrls))
 		for _, deleteUrl := range actRead.deleteUrls {
 			actRead.req.Request(deleteUrl)
