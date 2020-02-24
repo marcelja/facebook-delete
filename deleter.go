@@ -14,9 +14,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
+const numRoutines int = 40
 const facebookURL string = "https://mbasic.facebook.com"
 const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/regular/login/"
 const profileURL string = "https://mbasic.facebook.com/profile"
@@ -246,9 +248,12 @@ func categorySlice() []string {
 
 type deleter struct {
 	actRead *activityReader
+	req     *requester
 }
 
 func (del *deleter) Delete(years []string, categories []string) {
+	var wg sync.WaitGroup
+
 	for _, year := range years {
 		fmt.Println("Searching elements from " + year + ":")
 		yearInt, _ := strconv.Atoi(year)
@@ -260,12 +265,35 @@ func (del *deleter) Delete(years []string, categories []string) {
 		}
 		fmt.Println("\nDeleting elements: from " + year + ":")
 		bar := pb.Full.Start(len(del.actRead.deleteElements))
-		for _, elem := range del.actRead.deleteElements {
-			del.actRead.req.Request(elem.URL)
-			bar.Increment()
+		wg.Add(numRoutines)
+
+		for i := 0; i < numRoutines; i++ {
+			go del.StartRoutine(i, bar, &wg)
 		}
+		wg.Wait()
 		bar.Finish()
+		del.actRead.deleteElements = make([]deleteElement, 0)
 	}
+}
+
+func (del *deleter) StartRoutine(ID int, bar *pb.ProgressBar, wg *sync.WaitGroup) {
+	var index int
+	var elem *deleteElement
+	l := len(del.actRead.deleteElements)
+	i := 0
+
+	for {
+		index = i*numRoutines + ID
+		if index >= l {
+			break
+		}
+		elem = &del.actRead.deleteElements[index]
+		del.req.Request(elem.URL)
+
+		bar.Increment()
+		i++
+	}
+	wg.Done()
 }
 
 func main() {
@@ -275,6 +303,6 @@ func main() {
 
 	years := createMultiSelect("years", yearOptions)
 	categories := createMultiSelect("categories", categorySlice())
-	del := deleter{&actRead}
+	del := deleter{&actRead, req}
 	del.Delete(years, categories)
 }
