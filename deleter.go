@@ -31,6 +31,8 @@ var categoriesMap = map[string]string{
 	"Search History":      "search",
 }
 
+var tokensInURLs = [...]string{"/removecontent", "/delete", "/report"}
+
 type requester struct {
 	client *http.Client
 	jar    *cookiejar.Jar
@@ -135,10 +137,17 @@ func (fbl *fbLogin) PrintUserName(output string) {
 	fmt.Println("Logged in with user:", result, "(profile ID:", fbl.profileID+")")
 }
 
+type deleteElement struct {
+	URL      string
+	success  bool
+	category string
+	token    string
+}
+
 type activityReader struct {
-	req        *requester
-	fbl        *fbLogin
-	deleteURLs []string
+	req            *requester
+	fbl            *fbLogin
+	deleteElements []deleteElement
 }
 
 func (actRead *activityReader) ReadItems(year int, month int, category string) {
@@ -152,7 +161,7 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 		if !strings.Contains(output, searchString) {
 			break
 		}
-		actRead.StoreItemsFromOutput(output)
+		actRead.StoreItemsFromOutput(output, category)
 		actRead.UpdateOutputRead(month)
 
 		requestURL = strings.SplitAfter(output, searchString)[0]
@@ -162,9 +171,13 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 	}
 }
 
-func (actRead *activityReader) StoreItemsFromOutput(out string) {
-	token := "action=unlike"
-	// token := "deletion_request_id"
+func (actRead *activityReader) StoreItemsFromOutput(out string, category string) {
+	for _, token := range tokensInURLs {
+		actRead.StoreItemsWithToken(out, token, category)
+	}
+}
+
+func (actRead *activityReader) StoreItemsWithToken(out string, token string, category string) {
 	var match int
 	var from int
 	var to int
@@ -176,10 +189,12 @@ func (actRead *activityReader) StoreItemsFromOutput(out string) {
 		}
 		from = strings.LastIndex(out[:match], `"`) + 1
 		to = match + strings.Index(out[match:], `"`)
-		actRead.deleteURLs = append(actRead.deleteURLs, facebookURL+out[from:to])
+
+		actRead.deleteElements = append(actRead.deleteElements, deleteElement{facebookURL + out[from:to], false, category, token})
 		out = out[to:]
 	}
 }
+
 func (actRead *activityReader) UpdateOutputRead(month int) {
 	str := "\r"
 	for i, monthString := range monthStrings {
@@ -189,7 +204,7 @@ func (actRead *activityReader) UpdateOutputRead(month int) {
 			str += "    "
 		}
 	}
-	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteURLs))
+	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteElements))
 	fmt.Printf(str)
 }
 
@@ -229,20 +244,24 @@ func categorySlice() []string {
 	return keys
 }
 
-func (actRead *activityReader) ReadYearsAndCategories(years []string, categories []string) {
+type deleter struct {
+	actRead *activityReader
+}
+
+func (del *deleter) Delete(years []string, categories []string) {
 	for _, year := range years {
 		fmt.Println("Searching elements from " + year + ":")
 		yearInt, _ := strconv.Atoi(year)
 		for i := 1; i <= 12; i++ {
-			actRead.UpdateOutputRead(i)
+			del.actRead.UpdateOutputRead(i)
 			for _, category := range categories {
-				actRead.ReadItems(yearInt, i, category)
+				del.actRead.ReadItems(yearInt, i, category)
 			}
 		}
 		fmt.Println("\nDeleting elements: from " + year + ":")
-		bar := pb.Full.Start(len(actRead.deleteURLs))
-		for _, deleteURL := range actRead.deleteURLs {
-			actRead.req.Request(deleteURL)
+		bar := pb.Full.Start(len(del.actRead.deleteElements))
+		for _, elem := range del.actRead.deleteElements {
+			del.actRead.req.Request(elem.URL)
 			bar.Increment()
 		}
 		bar.Finish()
@@ -252,9 +271,10 @@ func (actRead *activityReader) ReadYearsAndCategories(years []string, categories
 func main() {
 	req := newRequester()
 	fbl := newFbLogin(req)
-	actRead := activityReader{req, fbl, make([]string, 0)}
+	actRead := activityReader{req, fbl, make([]deleteElement, 0)}
 
 	years := createMultiSelect("years", yearOptions)
 	categories := createMultiSelect("categories", categorySlice())
-	actRead.ReadYearsAndCategories(years, categories)
+	del := deleter{&actRead}
+	del.Delete(years, categories)
 }
