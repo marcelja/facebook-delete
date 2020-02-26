@@ -31,9 +31,12 @@ var categoriesMap = map[string]string{
 	"Posts":               "statuscluster",
 	"Likes and Reactions": "likes",
 	"Search History":      "search",
+	"Event Responses":     "eventrsvps",
+	"Your Events":         "createdevents",
+	"Event Invitations":   "invitedevents",
 }
 
-var tokensInURLs = [...]string{"/removecontent", "/delete", "/report"}
+var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php"}
 
 type requester struct {
 	client *http.Client
