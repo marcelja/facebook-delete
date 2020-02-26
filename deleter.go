@@ -285,7 +285,6 @@ func (del *deleter) Delete(years []string, categories []string) {
 
 func (del *deleter) StartRoutine(ID int, bar *pb.ProgressBar, wg *sync.WaitGroup) {
 	var index int
-	var elem *deleteElement
 	l := len(del.actRead.deleteElements)
 	i := 0
 
@@ -294,13 +293,19 @@ func (del *deleter) StartRoutine(ID int, bar *pb.ProgressBar, wg *sync.WaitGroup
 		if index >= l {
 			break
 		}
-		elem = &del.actRead.deleteElements[index]
-		del.req.Request(elem.URL)
-
+		del.DeleteElement(&del.actRead.deleteElements[index])
 		bar.Increment()
 		i++
 	}
 	wg.Done()
+}
+
+func (del *deleter) DeleteElement(elem *deleteElement) {
+	if elem.token == "/report" {
+		// TODO select spam, then untag
+	} else {
+		del.req.Request(elem.URL)
+	}
 }
 
 func main() {
