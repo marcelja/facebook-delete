@@ -345,6 +345,7 @@ func (del *deleter) Untag(elem *deleteElement) {
 		"action_key": {"UNTAG"},
 		"submit":     {"Submit"},
 	})
+	elem.success = true
 }
 
 func (del *deleter) DeleteElement(elem *deleteElement) {
@@ -354,6 +355,7 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 		del.Untag(elem)
 	} else {
 		del.req.Request(elem.URL)
+		elem.success = true
 	}
 }
 
