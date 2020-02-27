@@ -186,20 +186,29 @@ func (actRead *activityReader) StoreItemsFromOutput(out string, category string)
 	}
 }
 
+func getURLFromToString(htmlOut string, token string) (int, int) {
+	match := strings.Index(htmlOut, token)
+	if match == -1 {
+		return -1, -1
+	}
+	from := strings.LastIndex(htmlOut[:match], `"`) + 1
+	to := match + strings.Index(htmlOut[match:], `"`)
+	return from, to
+
+}
+
 func (actRead *activityReader) StoreItemsWithToken(out string, token string, category string) {
-	var match int
 	var from int
 	var to int
 
 	for {
-		match = strings.Index(out, token)
-		if match == -1 {
+		from, to = getURLFromToString(out, token)
+		if from == -1 {
 			break
 		}
-		from = strings.LastIndex(out[:match], `"`) + 1
-		to = match + strings.Index(out[match:], `"`)
-
-		actRead.deleteElements = append(actRead.deleteElements, deleteElement{facebookURL + out[from:to], false, category, token})
+		actRead.deleteElements = append(actRead.deleteElements, deleteElement{
+			facebookURL + out[from:to],
+			false, category, token})
 		out = out[to:]
 	}
 }
@@ -300,9 +309,36 @@ func (del *deleter) StartRoutine(ID int, bar *pb.ProgressBar, wg *sync.WaitGroup
 	wg.Done()
 }
 
+func readDtsgTag(htmlOut string) string {
+	dtsgSearch := `name="fb_dtsg" value="`
+	match := strings.Index(htmlOut, dtsgSearch)
+	dtsgFrom := match + len(dtsgSearch)
+	dtsgEnd := strings.Index(htmlOut[dtsgFrom:], `"`)
+	return htmlOut[dtsgFrom : dtsgFrom+dtsgEnd]
+}
+
 func (del *deleter) DeleteElement(elem *deleteElement) {
+	// Removing tags in activity log has to request "Report",
+	// then select "It's spam", then "Remove tag"
 	if elem.token == "/report" {
-		// TODO select spam, then untag
+		out := del.req.Request(elem.URL)
+		from, to := getURLFromToString(out, "/nfx/basic")
+
+		// Request "Yes, I'd like to continue filing this report."
+		out = del.req.Request(facebookURL + out[from:to])
+		from, to = getURLFromToString(out, "/nfx/basic")
+
+		out = del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
+			"fb_dtsg": {readDtsgTag(out)},
+			"answer":  {"spam"},
+		})
+
+		from, to = getURLFromToString(out, "/nfx/basic")
+		del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
+			"fb_dtsg":    {readDtsgTag(out)},
+			"action_key": {"UNTAG"},
+			"submit":     {"Submit"},
+		})
 	} else {
 		del.req.Request(elem.URL)
 	}
