@@ -317,28 +317,41 @@ func readDtsgTag(htmlOut string) string {
 	return htmlOut[dtsgFrom : dtsgFrom+dtsgEnd]
 }
 
+func (del *deleter) Untag(elem *deleteElement) {
+	out := del.req.Request(elem.URL)
+	from, to := getURLFromToString(out, "/nfx/basic")
+	if from == -1 {
+		return
+	}
+
+	// Request "Yes, I'd like to continue filing this report."
+	out = del.req.Request(facebookURL + out[from:to])
+	from, to = getURLFromToString(out, "/nfx/basic")
+	if from == -1 {
+		return
+	}
+
+	out = del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
+		"fb_dtsg": {readDtsgTag(out)},
+		"answer":  {"spam"},
+	})
+	from, to = getURLFromToString(out, "/nfx/basic")
+	if from == -1 {
+		return
+	}
+
+	del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
+		"fb_dtsg":    {readDtsgTag(out)},
+		"action_key": {"UNTAG"},
+		"submit":     {"Submit"},
+	})
+}
+
 func (del *deleter) DeleteElement(elem *deleteElement) {
 	// Removing tags in activity log has to request "Report",
 	// then select "It's spam", then "Remove tag"
 	if elem.token == "/report" {
-		out := del.req.Request(elem.URL)
-		from, to := getURLFromToString(out, "/nfx/basic")
-
-		// Request "Yes, I'd like to continue filing this report."
-		out = del.req.Request(facebookURL + out[from:to])
-		from, to = getURLFromToString(out, "/nfx/basic")
-
-		out = del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
-			"fb_dtsg": {readDtsgTag(out)},
-			"answer":  {"spam"},
-		})
-
-		from, to = getURLFromToString(out, "/nfx/basic")
-		del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
-			"fb_dtsg":    {readDtsgTag(out)},
-			"action_key": {"UNTAG"},
-			"submit":     {"Submit"},
-		})
+		del.Untag(elem)
 	} else {
 		del.req.Request(elem.URL)
 	}
