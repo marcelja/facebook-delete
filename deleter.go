@@ -38,6 +38,9 @@ var categoriesMap = map[string]string{
 	"Group Posts, Comments, Reactions": "groupposts",
 	"Others' Posts To Your Timeline":   "wallcluster",
 	"Posts You're Tagged In":           "tagsbyotherscluster",
+	"All App Activity":                 "allapps",
+	"Instagram Photos and Videos":      "genericapp&category_app_id=124024574287414",
+	"Spotify":                          "genericapp&category_app_id=174829003346",
 }
 
 var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php"}
