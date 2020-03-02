@@ -358,11 +358,15 @@ func (del *deleter) DeleteCoverOrProfilePhoto(elem *deleteElement) {
 	delURL := facebookURL + "/photo.php?fbid=" + elem.URL[beginIdx:endIdx] + "&delete&id=" + del.actRead.fbl.profileID
 	out := del.req.Request(delURL)
 	from, to := getURLFromToString(out, "/a/photo.php")
+	if from == -1 {
+		return
+	}
 	del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
 		"fb_dtsg":              {readDtsgTag(out)},
 		"confirm_photo_delete": {"1"},
 		"photo_delete":         {"Delete"},
 	})
+	elem.success = true
 }
 
 func (del *deleter) DeleteElement(elem *deleteElement) {
