@@ -43,7 +43,7 @@ var categoriesMap = map[string]string{
 	"Spotify":                          "genericapp&category_app_id=174829003346",
 }
 
-var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php"}
+var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;"}
 
 type requester struct {
 	client *http.Client
@@ -351,11 +351,29 @@ func (del *deleter) Untag(elem *deleteElement) {
 	elem.success = true
 }
 
+func (del *deleter) DeleteCoverOrProfilePhoto(elem *deleteElement) {
+	beginStr := "content_id="
+	beginIdx := strings.Index(elem.URL, beginStr) + len(beginStr)
+	endIdx := strings.Index(elem.URL, elem.token)
+	delURL := facebookURL + "/photo.php?fbid=" + elem.URL[beginIdx:endIdx] + "&delete&id=" + del.actRead.fbl.profileID
+	out := del.req.Request(delURL)
+	from, to := getURLFromToString(out, "/a/photo.php")
+	del.req.RequestPostForm(facebookURL+out[from:to], url.Values{
+		"fb_dtsg":              {readDtsgTag(out)},
+		"confirm_photo_delete": {"1"},
+		"photo_delete":         {"Delete"},
+	})
+}
+
 func (del *deleter) DeleteElement(elem *deleteElement) {
-	// Removing tags in activity log has to request "Report",
-	// then select "It's spam", then "Remove tag"
 	if elem.token == "/report" {
+		// Removing tags in activity log has to request "Report",
+		// then select "It's spam", then "Remove tag"
 		del.Untag(elem)
+	} else if strings.Contains(elem.token, "content_type") {
+		if elem.category == "Photos and Videos" {
+			del.DeleteCoverOrProfilePhoto(elem)
+		}
 	} else {
 		del.req.Request(elem.URL)
 		elem.success = true
