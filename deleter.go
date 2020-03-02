@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -262,6 +263,7 @@ func categorySlice() []string {
 	for key := range categoriesMap {
 		keys = append(keys, key)
 	}
+	sort.Strings(keys)
 	return keys
 }
 
