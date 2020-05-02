@@ -12,18 +12,20 @@ Binaries for Linux, macOS and Windows are attached to a release.
 
 Download the binary file for your platform of the [latest release](https://github.com/marcelja/facebook-delete/releases).
 
-Make the binary executable and run it. Example:
+Linux/macOS: Make the binary executable and run it. Example:
 
 ```
 $ chmod +x deleter-linux
 $ ./deleter-linux
 ```
 
+Windows: Run the .exe file and select "More information" and "Run anyway".
+
 ### From source
 
 A recent [Go](https://golang.org/) version needs to be installed. This can be done via your package manager or the golang website. Make sure that your `GOPATH` environment variable is set properly.
 
-#### Go get everyting
+#### Go get everything
 
 This would also `go get` the other dependencies:
 ```

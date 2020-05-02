@@ -2,16 +2,13 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"github.com/AlecAivazis/survey"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/juju/persistent-cookiejar"
-	"golang.org/x/crypto/ssh/terminal"
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -109,13 +106,20 @@ func newFbLogin(req *requester) *fbLogin {
 }
 
 func (fbl *fbLogin) EnterInformation() {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Print("Enter email: ")
-	fbl.email, _ = reader.ReadString('\n')
-	fmt.Print("Enter password: ")
-	bytePassword, _ := terminal.ReadPassword(0)
-	fbl.password = string(bytePassword)
-	fmt.Println("")
+	email := ""
+	prompt := &survey.Input{
+		Message: "Please type your email",
+	}
+	survey.AskOne(prompt, &email)
+
+	password := ""
+	promptPW := &survey.Password{
+		Message: "Please type your password",
+	}
+	survey.AskOne(promptPW, &password)
+
+	fbl.email = email
+	fbl.password = password
 }
 
 func (fbl *fbLogin) Login() {
@@ -241,8 +245,7 @@ func createRequestURL(year int, month int, profileID string, category string) (s
 }
 
 func toUnixTime(year int, month int, decrement int64) string {
-	location, _ := time.LoadLocation("America/Los_Angeles")
-	timestamp := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, location)
+	timestamp := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
 }
 
