@@ -22,6 +22,8 @@ const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/
 const profileURL string = "https://mbasic.facebook.com/profile"
 const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
+const anyMonthString = "Any month"
+
 var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 var categoriesMap = map[string]string{
@@ -165,6 +167,7 @@ type activityReader struct {
 	req            *requester
 	fbl            *fbLogin
 	deleteElements []deleteElement
+	selectedMonths []string
 }
 
 func (actRead *activityReader) ReadItems(year int, month int, category string) {
@@ -221,17 +224,35 @@ func (actRead *activityReader) StoreItemsWithToken(out string, token string, cat
 	}
 }
 
-func (actRead *activityReader) UpdateOutputRead(month int) {
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
+func (actRead *activityReader) UpdateOutputRead(month int) bool {
+	anyMonth := stringInSlice(anyMonthString, actRead.selectedMonths)
+	currentMonthSkip := true
 	str := "\r"
 	for i, monthString := range monthStrings {
 		if month > i {
-			str += monthString + " "
+			if stringInSlice(monthString, actRead.selectedMonths) || anyMonth {
+				currentMonthSkip = false
+				str += monthString + " "
+			} else {
+				currentMonthSkip = true
+				str += "... "
+			}
 		} else {
 			str += "    "
 		}
 	}
 	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteElements))
 	fmt.Printf(str)
+	return currentMonthSkip
 }
 
 func createRequestURL(year int, month int, profileID string, category string) (string, string) {
@@ -282,7 +303,10 @@ func (del *deleter) Delete(years []string, categories []string) {
 		fmt.Println("Searching elements from " + year + ":")
 		yearInt, _ := strconv.Atoi(year)
 		for i := 1; i <= 12; i++ {
-			del.actRead.UpdateOutputRead(i)
+			skip := del.actRead.UpdateOutputRead(i)
+			if skip {
+				continue
+			}
 			for _, category := range categories {
 				del.actRead.ReadItems(yearInt, i, category)
 			}
@@ -392,10 +416,14 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 func main() {
 	req := newRequester()
 	fbl := newFbLogin(req)
-	actRead := activityReader{req, fbl, make([]deleteElement, 0)}
+	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
 	years := createMultiSelect("years", yearOptions)
+	monthSelect := append([]string{anyMonthString}, monthStrings...)
+	months := createMultiSelect("months", monthSelect)
+	actRead.selectedMonths = months
 	categories := createMultiSelect("categories", categorySlice())
+
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
 }
