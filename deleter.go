@@ -22,7 +22,7 @@ const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/
 const profileURL string = "https://mbasic.facebook.com/profile"
 const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
-const anyMonthString = "Any month"
+const anyMonthString string = "Any month"
 
 var yearOptions = []string{"2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
@@ -266,7 +266,9 @@ func createRequestURL(year int, month int, profileID string, category string) (s
 }
 
 func toUnixTime(year int, month int, decrement int64) string {
-	timestamp := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	// Timezone should be PDT but `time.LoadLocation("America/Los_Angeles")` is not working as Windows executable
+	// see https://github.com/golang/go/issues/38453
+	timestamp := time.Date(year, time.Month(month), 1, 7, 0, 0, 0, time.UTC)
 	return strconv.FormatInt(timestamp.Unix()-decrement, 10)
 }
 
