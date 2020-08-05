@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-const numRoutines int = 40
+const numRoutines int = 5
 const facebookURL string = "https://mbasic.facebook.com"
 const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/regular/login/"
 const profileURL string = "https://mbasic.facebook.com/profile"
@@ -177,11 +177,12 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 	moreCounter := 1
 	var searchString string
 	for {
+		actRead.StoreItemsFromOutput(output, category)
+
 		searchString = sectionIDStr + `_more_` + strconv.Itoa(moreCounter)
 		if !strings.Contains(output, searchString) {
 			break
 		}
-		actRead.StoreItemsFromOutput(output, category)
 		actRead.UpdateOutputRead(month)
 
 		requestURL = strings.SplitAfter(output, searchString)[0]
@@ -205,7 +206,6 @@ func getURLFromToString(htmlOut string, token string) (int, int) {
 	from := strings.LastIndex(htmlOut[:match], `"`) + 1
 	to := match + strings.Index(htmlOut[match:], `"`)
 	return from, to
-
 }
 
 func (actRead *activityReader) StoreItemsWithToken(out string, token string, category string) {
