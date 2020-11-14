@@ -26,4 +26,4 @@ curl https://mbasic.facebook.com/login/device-based/regular/login/ \
 
 string=$(curl https://mbasic.facebook.com/ -b cookies.txt -c cookies.txt)
 echo "Login worked if user name is included:"
-echo ${string#*mbasic_logout_button}
+echo ${string: -200}
