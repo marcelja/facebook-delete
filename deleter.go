@@ -131,6 +131,22 @@ func (fbl *fbLogin) Login() {
 		"pass":  {fbl.password},
 		"login": {"Log In"},
 	}
+	// This first request is expected to fail
+	fbl.requester.RequestPostForm(facebookLoginURL, form)
+
+	loginFormHTML := fbl.requester.Request(facebookURL)
+	lsdToken := readLoginToken(loginFormHTML, "lsd")
+	jazoestToken := readLoginToken(loginFormHTML, "jazoest")
+	liToken := readLoginToken(loginFormHTML, "li")
+
+	form = url.Values{
+		"email":   {fbl.email},
+		"pass":    {fbl.password},
+		"lsd":     {lsdToken},
+		"jazoest": {jazoestToken},
+		"li":      {liToken},
+		"login":   {"Log In"},
+	}
 	fbl.requester.RequestPostForm(facebookLoginURL, form)
 }
 
@@ -349,6 +365,14 @@ func readDtsgTag(htmlOut string) string {
 	dtsgFrom := match + len(dtsgSearch)
 	dtsgEnd := strings.Index(htmlOut[dtsgFrom:], `"`)
 	return htmlOut[dtsgFrom : dtsgFrom+dtsgEnd]
+}
+
+func readLoginToken(htmlOut string, name string) string {
+	search := `name="` + name + `" value="`
+	match := strings.Index(htmlOut, search)
+	from := match + len(search)
+	end := strings.Index(htmlOut[from:], `"`)
+	return htmlOut[from : from+end]
 }
 
 func (del *deleter) Untag(elem *deleteElement) {
