@@ -22,8 +22,6 @@ const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/
 const profileURL string = "https://mbasic.facebook.com/profile"
 const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
-const anyMonthString string = "Any month"
-
 var yearOptions = []string{"2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 var categoriesMap = map[string]string{
@@ -250,12 +248,11 @@ func stringInSlice(a string, list []string) bool {
 }
 
 func (actRead *activityReader) UpdateOutputRead(month int) bool {
-	anyMonth := stringInSlice(anyMonthString, actRead.selectedMonths)
 	currentMonthSkip := true
 	str := "\r"
 	for i, monthString := range monthStrings {
 		if month > i {
-			if stringInSlice(monthString, actRead.selectedMonths) || anyMonth {
+			if stringInSlice(monthString, actRead.selectedMonths) {
 				currentMonthSkip = false
 				str += monthString + " "
 			} else {
@@ -445,8 +442,7 @@ func main() {
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
 	years := createMultiSelect("years", yearOptions)
-	monthSelect := append([]string{anyMonthString}, monthStrings...)
-	months := createMultiSelect("months", monthSelect)
+	months := createMultiSelect("months", monthStrings)
 	actRead.selectedMonths = months
 	categories := createMultiSelect("categories", categorySlice())
 
