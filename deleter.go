@@ -287,7 +287,6 @@ func toUnixTime(year int, month int, decrement int64) string {
 
 func createMultiSelect(yearsOrCategories string, options []string) []string {
 	selected := []string{}
-	survey.MultiSelectQuestionTemplate = strings.Replace(survey.MultiSelectQuestionTemplate, "enter to select, type to filter", "space to select, enter to continue", 1)
 	prompt := &survey.MultiSelect{
 		Message:  "Which " + yearsOrCategories,
 		Options:  options,
