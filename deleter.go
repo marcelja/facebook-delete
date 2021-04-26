@@ -58,12 +58,18 @@ func newRequester() *requester {
 func (r *requester) Request(requestURL string) string {
 	requestURL = updateURL(requestURL)
 	resp, err := r.client.Get(requestURL)
+	if (resp.StatusCode != 200) {
+		panic("bad response status")
+	}
 	return retrieveRequestString(resp, err)
 }
 
 func (r *requester) RequestPostForm(requestURL string, form url.Values) string {
 	requestURL = updateURL(requestURL)
 	resp, err := r.client.PostForm(requestURL, form)
+	if (resp.StatusCode != 200) {
+		panic("bad response status")
+	}
 	return retrieveRequestString(resp, err)
 }
 
@@ -269,7 +275,7 @@ func (actRead *activityReader) UpdateOutputRead(month int) bool {
 }
 
 func createRequestURL(year int, month int, profileID string, category string) (string, string) {
-	sectionIDStr := "sectionID=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
+	sectionIDStr := "section_id=month_" + strconv.Itoa(year) + "_" + strconv.Itoa(month)
 	newURL := strings.Replace(activityURL, "<profileid>", profileID, 1)
 	newURL += "?category_key=" + categoriesMap[category]
 	newURL += "&timeend=" + toUnixTime(year, month+1, 1)
@@ -421,6 +427,13 @@ func (del *deleter) DeleteCoverOrProfilePhoto(elem *deleteElement) {
 }
 
 func (del *deleter) DeleteElement(elem *deleteElement) {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Println("Failed to delete element", elem)
+			elem.success = false
+		}
+	}()
+
 	if elem.token == "/report" {
 		// Removing tags in activity log has to request "Report",
 		// then select "It's spam", then "Remove tag"
