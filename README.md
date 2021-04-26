@@ -23,7 +23,7 @@ Windows: Run the .exe file and select "More information" and "Run anyway".
 
 ### From source
 
-A recent [Go](https://golang.org/) version needs to be installed. This can be done via your package manager or the golang website. Make sure that your `GOPATH` environment variable is set properly.
+A recent [Go](https://golang.org/) version needs to be installed. This can be done via your package manager or the golang website. Make sure that your `GOPATH` and `GOBIN` environment variables are set properly.
 
 #### Go get everything
 
