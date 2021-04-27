@@ -86,7 +86,11 @@ func retrieveRequestString(resp *http.Response, err error) string {
 	if err != nil {
 		fmt.Println("error during http request")
 	}
-	return string(body)
+	strBody := string(body)
+	if strings.Contains(strBody, "You can try again later") {
+		panic("ratelimited")
+	}
+	return strBody
 }
 
 type fbLogin struct {
