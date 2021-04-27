@@ -58,7 +58,7 @@ func newRequester() *requester {
 func (r *requester) Request(requestURL string) string {
 	requestURL = updateURL(requestURL)
 	resp, err := r.client.Get(requestURL)
-	if (resp.StatusCode != 200) {
+	if resp.StatusCode != 200 {
 		panic("bad response status")
 	}
 	return retrieveRequestString(resp, err)
@@ -67,7 +67,7 @@ func (r *requester) Request(requestURL string) string {
 func (r *requester) RequestPostForm(requestURL string, form url.Values) string {
 	requestURL = updateURL(requestURL)
 	resp, err := r.client.PostForm(requestURL, form)
-	if (resp.StatusCode != 200) {
+	if resp.StatusCode != 200 {
 		panic("bad response status")
 	}
 	return retrieveRequestString(resp, err)
@@ -320,7 +320,7 @@ func (del *deleter) Delete(years []string, categories []string) {
 	var wg sync.WaitGroup
 
 	for _, year := range years {
-		fmt.Println("Searching elements from " + year + ":")
+		fmt.Println("\nSearching elements from " + year + ":")
 		yearInt, _ := strconv.Atoi(year)
 		for i := 1; i <= 12; i++ {
 			skip := del.actRead.UpdateOutputRead(i)
@@ -340,8 +340,30 @@ func (del *deleter) Delete(years []string, categories []string) {
 		}
 		wg.Wait()
 		bar.Finish()
+		del.PrintSummary(del.actRead.deleteElements)
 		del.actRead.deleteElements = make([]deleteElement, 0)
 	}
+}
+
+func (del *deleter) PrintSummary(deleteElements []deleteElement) {
+	var summary = map[string]int{}
+	count := 0
+	for _, elem := range deleteElements {
+		if elem.success {
+			if val, ok := summary[elem.category]; ok {
+				summary[elem.category] = val + 1
+			} else {
+				summary[elem.category] = 1
+			}
+			count += 1
+		}
+	}
+	for _, category := range categorySlice() {
+		if val, ok := summary[category]; ok {
+			fmt.Println(category + ": " + strconv.Itoa(val) + " deleted")
+		}
+	}
+	fmt.Println("Total: " + strconv.Itoa(count) + " deleted")
 }
 
 func (del *deleter) StartRoutine(ID int, bar *pb.ProgressBar, wg *sync.WaitGroup) {
