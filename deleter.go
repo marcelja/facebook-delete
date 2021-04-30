@@ -41,7 +41,7 @@ var categoriesMap = map[string]string{
 	"Spotify":                          "genericapp&category_app_id=174829003346",
 }
 
-var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;"}
+var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;", "action=delete" }
 
 type requester struct {
 	client *http.Client
@@ -197,6 +197,7 @@ type activityReader struct {
 func (actRead *activityReader) ReadItems(year int, month int, category string) {
 	requestURL, sectionIDStr := createRequestURL(year, month, actRead.fbl.profileID, category)
 	output := actRead.req.Request(requestURL)
+	fmt.Sprintf("%s", output)
 
 	moreCounter := 1
 	var searchString string
@@ -212,6 +213,7 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 		requestURL = strings.SplitAfter(output, searchString)[0]
 		requestURL = facebookURL + requestURL[strings.LastIndex(requestURL, `"`)+1:]
 		output = actRead.req.Request(requestURL)
+		time.Sleep(1 * time.Second)
 		moreCounter++
 	}
 }
@@ -452,6 +454,21 @@ func (del *deleter) DeleteCoverOrProfilePhoto(elem *deleteElement) {
 	elem.success = true
 }
 
+func (del *deleter) DeleteSearch(elem *deleteElement) {
+
+
+        out := del.req.Request(elem.URL)
+
+	from, to := getURLFromToString(out, "/allactivity/delete/")
+        if from == -1 {
+                return
+        }
+	del_url := facebookURL+out[from:to]
+        out = del.req.Request(del_url)
+        elem.success = true
+
+}
+
 func (del *deleter) DeleteElement(elem *deleteElement) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -468,6 +485,8 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 		if elem.category == "Photos and Videos" {
 			del.DeleteCoverOrProfilePhoto(elem)
 		}
+	} else if elem.token == "action=delete" {
+		del.DeleteSearch(elem)
 	} else {
 		del.req.Request(elem.URL)
 		elem.success = true
