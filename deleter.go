@@ -87,8 +87,8 @@ func retrieveRequestString(resp *http.Response, err error) string {
 		fmt.Println("error during http request")
 	}
 	strBody := string(body)
-	if strings.Contains(strBody, "You can try again later") {
-		panic("ratelimited")
+	if (strings.Contains(strBody, "You can try again later") || strings.Contains(strBody, "temporarily blocked")) {
+		panic("ratelimited, please open https://mbasic.facebook.com and navigate to your activity log to see more information.")
 	}
 	return strBody
 }
