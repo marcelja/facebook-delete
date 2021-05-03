@@ -41,7 +41,7 @@ var categoriesMap = map[string]string{
 	"Spotify":                          "genericapp&category_app_id=174829003346",
 }
 
-var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;"}
+var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;", "action=delete"}
 
 type requester struct {
 	client *http.Client
@@ -452,6 +452,20 @@ func (del *deleter) DeleteCoverOrProfilePhoto(elem *deleteElement) {
 	elem.success = true
 }
 
+func (del *deleter) DeleteSearch(elem *deleteElement) {
+
+	out := del.req.Request(elem.URL)
+
+	from, to := getURLFromToString(out, "/allactivity/delete/")
+	if from == -1 {
+		return
+	}
+	del_url := facebookURL + out[from:to]
+	out = del.req.Request(del_url)
+	elem.success = true
+
+}
+
 func (del *deleter) DeleteElement(elem *deleteElement) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -468,6 +482,8 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 		if elem.category == "Photos and Videos" {
 			del.DeleteCoverOrProfilePhoto(elem)
 		}
+	} else if elem.token == "action=delete" {
+		del.DeleteSearch(elem)
 	} else {
 		del.req.Request(elem.URL)
 		elem.success = true
