@@ -2,6 +2,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/AlecAivazis/survey"
 	"github.com/cheggaaa/pb/v3"
@@ -42,6 +43,10 @@ var categoriesMap = map[string]string{
 }
 
 var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/remove.php", "&amp;content_type=4&amp;", "action=delete"}
+
+var rateLimit int
+var limitSearch bool
+var limitDelete bool
 
 type requester struct {
 	client *http.Client
@@ -201,6 +206,9 @@ func (actRead *activityReader) ReadItems(year int, month int, category string) {
 	moreCounter := 1
 	var searchString string
 	for {
+		if limitSearch {
+			time.Sleep(time.Duration(rateLimit) * time.Millisecond)
+		}
 		actRead.StoreItemsFromOutput(output, category)
 
 		searchString = sectionIDStr + `_more_` + strconv.Itoa(moreCounter)
@@ -474,6 +482,10 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 		}
 	}()
 
+	if limitDelete {
+		time.Sleep(time.Duration(rateLimit) * time.Millisecond)
+	}
+
 	if elem.token == "/report" {
 		// Removing tags in activity log has to request "Report",
 		// then select "It's spam", then "Remove tag"
@@ -491,6 +503,20 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 }
 
 func main() {
+	flag.IntVar(&rateLimit, "rateLimit", 0, "Wait this many milliseconds between requests.")
+	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
+	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
+	flag.Parse()
+	if rateLimit > 0 {
+		if limitSearch && limitDelete {
+			fmt.Printf("Waiting %d ms before search and delete requests.\n", rateLimit)
+		} else if limitSearch {
+			fmt.Printf("Waiting %d ms before search requests.\n", rateLimit)
+		} else if limitDelete {
+			fmt.Printf("Waiting %d ms before delete requests.\n", rateLimit)
+		}
+	}
+
 	req := newRequester()
 	fbl := newFbLogin(req)
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
