@@ -2,6 +2,8 @@
 
 This program can be used to clean up a facebook account without deleting the entire account.
 
+_Note: Facebook has a very strange login process. Please open a GitHub issue if the program is not able to login._
+
 ![](demo.gif)
 
 ## Run program
