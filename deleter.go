@@ -35,7 +35,7 @@ var categoriesMap = map[string]string{
 	"Event Invitations":                "invitedevents",
 	"Photos and Videos":                "photos",
 	"Group Posts and Comments":         "groupposts",
-	"Group Reaction":                   "groupreactions",
+	"Group Reactions":                  "groupreactions",
 	"Others' Posts To Your Timeline":   "wallcluster",
 	"Posts You're Tagged In":           "tagsbyotherscluster",
 	"All App Activity":                 "allapps",
