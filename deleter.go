@@ -282,7 +282,7 @@ func (actRead *activityReader) UpdateOutputRead(month int) bool {
 			str += "    "
 		}
 	}
-	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteElements))
+	str += "  Elements found:\t" + strconv.Itoa(len(actRead.deleteElements)) + "\n"
 	fmt.Printf(str)
 	return currentMonthSkip
 }
