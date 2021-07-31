@@ -25,23 +25,14 @@ Windows: Run the .exe file and select "More information" and "Run anyway".
 
 ### From source
 
-A recent [Go](https://golang.org/) version needs to be installed. This can be done via your package manager or the golang website. Make sure that your `GOPATH` and `GOBIN` environment variables are set properly.
+A recent [Go](https://golang.org/) version needs to be installed. This can be done via your package manager or the golang website.
 
-#### Go get everything
-
-This would also `go get` the other dependencies:
-```
-$ go get github.com/marcelja/facebook-delete
-$ cd $(go env GOPATH)/src/github.com/marcelja/facebook-delete
-$ go run deleter.go
-```
-
-#### Clone this repository
+__Clone this repository__
 
 ```
 $ git clone https://github.com/marcelja/facebook-delete.git
 $ cd facebook-delete
-$ go get
+$ go install
 $ go run deleter.go
 ```
 
