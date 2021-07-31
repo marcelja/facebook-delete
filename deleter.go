@@ -4,7 +4,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/AlecAivazis/survey"
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/juju/persistent-cookiejar"
 	"io/ioutil"
