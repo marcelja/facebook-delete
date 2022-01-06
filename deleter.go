@@ -23,7 +23,7 @@ const facebookLoginURL string = "https://mbasic.facebook.com/login/device-based/
 const profileURL string = "https://mbasic.facebook.com/profile"
 const activityURL string = "https://mbasic.facebook.com/<profileid>/allactivity"
 
-var yearOptions = []string{"2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
+var yearOptions = []string{"2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008", "2007", "2006"}
 var monthStrings = []string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
 var categoriesMap = map[string]string{
 	"Comments":                       "commentscluster",
