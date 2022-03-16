@@ -4,17 +4,19 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/cheggaaa/pb/v3"
-	"github.com/juju/persistent-cookiejar"
 	"io/ioutil"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/cheggaaa/pb/v3"
 )
 
 const numRoutines int = 5
@@ -48,6 +50,10 @@ var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/
 var rateLimit int
 var limitSearch bool
 var limitDelete bool
+var customYears string
+var customMonths string
+var selectAllContent bool
+var excludeInstagram bool
 
 type requester struct {
 	client *http.Client
@@ -113,7 +119,7 @@ func newFbLogin(req *requester) *fbLogin {
 	if !fbl.IsLoggedIn() {
 		fbl.EnterInformation()
 		fbl.Login()
-		req.jar.Save()
+		//req.jar.Save()
 		if !fbl.IsLoggedIn() {
 			panic("Failed to login. Please open https://mbasic.facebook.com in a browser and login there. Facebook might requires an additional verification. Afterwards, you can try again.")
 		}
@@ -507,6 +513,10 @@ func main() {
 	flag.IntVar(&rateLimit, "rateLimit", 0, "Wait this many milliseconds between requests.")
 	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
 	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
+	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to set.")
+	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
+	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
+	flag.BoolVar(&excludeInstagram, "excludeInstagram", false, "Exclude Instagram from content.")
 	flag.Parse()
 	if rateLimit > 0 {
 		if limitSearch && limitDelete {
@@ -517,15 +527,94 @@ func main() {
 			fmt.Printf("Waiting %d ms before delete requests.\n", rateLimit)
 		}
 	}
+	if excludeInstagram == true {
+		fmt.Println("Instagram content will be excluded.")
+		delete(categoriesMap, "Instagram Photos and Videos")
+	}
 
+	// Validate custom years flag
+	years := []string{}
+	customYears = strings.ReplaceAll(customYears, " ", "")
+	re1, _ := regexp.Compile("^(([\\d]{4})([,][\\d]{4})*)?$")
+	if !re1.MatchString(customYears) {
+		if customYears == "all" {
+			customYears = "2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006"
+		} else {
+			fmt.Println("Invalid years passed through customYears flag.")
+			customYears = ""
+		}
+	}
+
+	// Validate custom months flag
+	months := []string{}
+	customMonths = strings.ReplaceAll(customMonths, " ", "")
+	re2, _ := regexp.Compile("^((0?[1-9]|1[012])([,](0?[1-9]|1[012]))*)?$")
+	if !re2.MatchString(customMonths) {
+		if customYears == "all" {
+			customMonths = "Jan,Feb,Mar,May,Apr,Jun,Jul,Aug,Sep,Oct,Nov,Dec"
+		} else {
+			fmt.Println("Invalid months passed through customMonths flag.")
+			customMonths = ""
+		}
+	}
+
+	// Login
 	req := newRequester()
 	fbl := newFbLogin(req)
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
-	years := createMultiSelect("years", yearOptions)
-	months := createMultiSelect("months", monthStrings)
-	actRead.selectedMonths = months
-	categories := createMultiSelect("categories", categorySlice())
+	if customYears == "" {
+		years = createMultiSelect("years", yearOptions)
+	} else {
+		years = strings.Split(customYears, ",")
+		fmt.Printf("Selected years: %s \n", strings.Join(years, ", "))
+	}
+
+	if customMonths == "" {
+		months = createMultiSelect("months", monthStrings)
+		actRead.selectedMonths = months
+	} else {
+		months = strings.Split(customMonths, ",")
+		monthLabels := make(map[string]string)
+		monthLabels["1"] = "Jan"
+		monthLabels["01"] = "Jan"
+		monthLabels["2"] = "Feb"
+		monthLabels["02"] = "Feb"
+		monthLabels["3"] = "Mar"
+		monthLabels["03"] = "Mar"
+		monthLabels["4"] = "Apr"
+		monthLabels["04"] = "Apr"
+		monthLabels["5"] = "May"
+		monthLabels["05"] = "May"
+		monthLabels["6"] = "Jun"
+		monthLabels["06"] = "Jun"
+		monthLabels["7"] = "Jul"
+		monthLabels["07"] = "Jul"
+		monthLabels["8"] = "Aug"
+		monthLabels["08"] = "Aug"
+		monthLabels["9"] = "Sep"
+		monthLabels["09"] = "Sep"
+		monthLabels["10"] = "Oct"
+		monthLabels["11"] = "Nov"
+		monthLabels["12"] = "Dec"
+
+		newMonths := []string{}
+		for _, month := range months {
+			if month, found := monthLabels[month]; found {
+				fmt.Printf("Found month: %s \n", month)
+				newMonths = append(newMonths, month)
+			}
+		}
+		fmt.Printf("Selected months: %s \n", strings.Join(newMonths, ", "))
+		actRead.selectedMonths = newMonths
+	}
+
+	categories := []string{}
+	if selectAllContent {
+		categories = categorySlice()
+	} else {
+		categories = createMultiSelect("categories", categorySlice())
+	}
 
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
