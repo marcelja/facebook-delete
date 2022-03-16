@@ -58,10 +58,10 @@ $ ./deleter-linux -rateLimit 500 -limitDelete=0
 
 ### Selection via flags
 
-| Flag              | Type     | Description                                                             | Example                                                 |
-|-------------------|----------|-------------------------------------------------------------------------|---------------------------------------------------------|
-| -customYears      | `string` | Comma-separated years (YYYY) to select. Use `all` for a full selection. | `-customYears="2006,2009,2020"` or `-customYears="all"` |
-| -customMonths     | `string` | Comma-separated months to select.                                       | `-customMonths="1,2,12` or `-customMonths="01,02,12"`   |
-| -selectAllContent | `bool`   | If set to `true` it will select all content without asking questions.   | `-selectAllContent=true`                                |
+| Flag              | Type     | Description                                                            | Example                                                 |
+|-------------------|----------|------------------------------------------------------------------------|---------------------------------------------------------|
+| -customYears      | `string` | Comma-separated years (YYYY) to select. Use `all` to select all years. | `-customYears="2006,2009,2020"` or `-customYears="all"` |
+| -customMonths     | `string` | Comma-separated months to select. Use `all` to select all months.      | `-customMonths="1,2,12` or `-customMonths="01,02,12"`   |
+| -selectAllContent | `bool`   | If set to `true` it will select all content without asking questions.  | `-selectAllContent=true`                                |                              |
 
 Note: if invalid arguments are passed to the flags, you will be warned and asked to do a manual selection.
