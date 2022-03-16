@@ -53,7 +53,6 @@ var limitDelete bool
 var customYears string
 var customMonths string
 var selectAllContent bool
-var excludeInstagram bool
 
 type requester struct {
 	client *http.Client
@@ -516,7 +515,6 @@ func main() {
 	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to select.")
 	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
 	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
-	flag.BoolVar(&excludeInstagram, "excludeInstagram", false, "Exclude Instagram from content.")
 	flag.Parse()
 	if rateLimit > 0 {
 		if limitSearch && limitDelete {
@@ -526,10 +524,6 @@ func main() {
 		} else if limitDelete {
 			fmt.Printf("Waiting %d ms before delete requests.\n", rateLimit)
 		}
-	}
-	if excludeInstagram == true {
-		fmt.Println("Instagram content will be excluded.")
-		delete(categoriesMap, "Instagram Photos and Videos")
 	}
 
 	// Validate custom years flag
@@ -563,6 +557,7 @@ func main() {
 	fbl := newFbLogin(req)
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
+	// Process Years
 	if customYears == "" {
 		years = createMultiSelect("years", yearOptions)
 	} else {
@@ -570,6 +565,7 @@ func main() {
 		fmt.Printf("Selected years: %s \n", strings.Join(years, ", "))
 	}
 
+	// Process Months
 	if customMonths == "" {
 		months = createMultiSelect("months", monthStrings)
 		actRead.selectedMonths = months
@@ -609,6 +605,7 @@ func main() {
 		actRead.selectedMonths = newMonths
 	}
 
+	// Process Categories
 	categories := []string{}
 	if selectAllContent {
 		categories = categorySlice()
@@ -616,6 +613,7 @@ func main() {
 		categories = createMultiSelect("categories", categorySlice())
 	}
 
+	// Delete
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
 }

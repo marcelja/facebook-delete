@@ -2,7 +2,7 @@
 
 This program can be used to clean up a Facebook account without deleting the entire account.
 
-_Warning: Facebook has some measures in place to prevent high-frequency activity such as the one this tool provides. Please take a look at the [Rate limiting](#rate-limiting) section to learn more and try and prevent detection._ 
+_Warning: Facebook has some measures in place to prevent high-frequency activity such as the one this tool provides. The current rate limit has been currently set to 30 seconds, which might not even be slow enough. Please check out the [Rate-limiting](#rate-limiting) section if you want to increase/decrease this limit._ 
 
 _Note: Facebook has a very strange login process. Please open a GitHub issue if the program is not able to login. Here's a [workaround for the login process](https://github.com/marcelja/facebook-delete/wiki/Login-with-browser-cookie) which you can also use if your account has two-factor authentication enabled._
 
@@ -58,10 +58,12 @@ $ ./deleter-linux -rateLimit 500 -limitDelete=0
 
 ### Selection via flags
 
+If you want to skip the manual terminal selection, feel free to use the following flags:
+
 | Flag              | Type     | Description                                                            | Example                                                 |
 |-------------------|----------|------------------------------------------------------------------------|---------------------------------------------------------|
 | -customYears      | `string` | Comma-separated years (YYYY) to select. Use `all` to select all years. | `-customYears="2006,2009,2020"` or `-customYears="all"` |
 | -customMonths     | `string` | Comma-separated months to select. Use `all` to select all months.      | `-customMonths="1,2,12` or `-customMonths="01,02,12"`   |
 | -selectAllContent | `bool`   | If set to `true` it will select all content without asking questions.  | `-selectAllContent=true`                                |                              |
 
-Note: if invalid arguments are passed to the flags, you will be warned and asked to do a manual selection.
+_Note: if invalid arguments are passed to the flags, a warning will appear and you will be asked to perform a manual selection._
