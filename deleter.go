@@ -510,10 +510,10 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 }
 
 func main() {
-	flag.IntVar(&rateLimit, "rateLimit", 0, "Wait this many milliseconds between requests.")
+	flag.IntVar(&rateLimit, "rateLimit", 30000, "Wait this many milliseconds between requests.")
 	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
 	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
-	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to set.")
+	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to select.")
 	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
 	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
 	flag.BoolVar(&excludeInstagram, "excludeInstagram", false, "Exclude Instagram from content.")
