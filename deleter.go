@@ -544,8 +544,8 @@ func main() {
 	customMonths = strings.ReplaceAll(customMonths, " ", "")
 	re2, _ := regexp.Compile("^((0?[1-9]|1[012])([,](0?[1-9]|1[012]))*)?$")
 	if !re2.MatchString(customMonths) {
-		if customYears == "all" {
-			customMonths = "Jan,Feb,Mar,May,Apr,Jun,Jul,Aug,Sep,Oct,Nov,Dec"
+		if customMonths == "all" {
+			customMonths = "01,02,03,04,05,06,07,08,09,10,11,12"
 		} else {
 			fmt.Println("Invalid months passed through customMonths flag.")
 			customMonths = ""
