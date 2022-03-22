@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/cookiejar"
 	"net/url"
 	"regexp"
 	"sort"
@@ -17,6 +16,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/cheggaaa/pb/v3"
+	//"github.com/juju/persistent-cookiejar"
+	"net/http/cookiejar"
 )
 
 const numRoutines int = 5
@@ -508,69 +509,36 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 	}
 }
 
-func main() {
-	flag.IntVar(&rateLimit, "rateLimit", 30000, "Wait this many milliseconds between requests.")
-	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
-	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
-	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to select.")
-	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
-	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
-	flag.Parse()
-	if rateLimit > 0 {
-		if limitSearch && limitDelete {
-			fmt.Printf("Waiting %d ms before search and delete requests.\n", rateLimit)
-		} else if limitSearch {
-			fmt.Printf("Waiting %d ms before search requests.\n", rateLimit)
-		} else if limitDelete {
-			fmt.Printf("Waiting %d ms before delete requests.\n", rateLimit)
-		}
-	}
+func validateYearsFlag(flagContent string) bool {
+	years := strings.ReplaceAll(flagContent, " ", "")
+	re, _ := regexp.Compile("^(([\\d]{4})([,][\\d]{4})*)?$")
+	return re.MatchString(years) || flagContent == "all" || flagContent == ""
+}
 
-	// Validate custom years flag
+func validateMonthsFlag(flagContent string) bool {
+	months := strings.ReplaceAll(flagContent, " ", "")
+	re, _ := regexp.Compile("^((0?[1-9]|1[012])([,](0?[1-9]|1[012]))*)?$")
+	return re.MatchString(months) || flagContent == "all" || flagContent == ""
+}
+
+func processYears(flagContent string) []string {
 	years := []string{}
-	customYears = strings.ReplaceAll(customYears, " ", "")
-	re1, _ := regexp.Compile("^(([\\d]{4})([,][\\d]{4})*)?$")
-	if !re1.MatchString(customYears) {
-		if customYears == "all" {
-			customYears = "2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006"
-		} else {
-			fmt.Println("Invalid years passed through customYears flag.")
-			customYears = ""
-		}
-	}
-
-	// Validate custom months flag
-	months := []string{}
-	customMonths = strings.ReplaceAll(customMonths, " ", "")
-	re2, _ := regexp.Compile("^((0?[1-9]|1[012])([,](0?[1-9]|1[012]))*)?$")
-	if !re2.MatchString(customMonths) {
-		if customMonths == "all" {
-			customMonths = "01,02,03,04,05,06,07,08,09,10,11,12"
-		} else {
-			fmt.Println("Invalid months passed through customMonths flag.")
-			customMonths = ""
-		}
-	}
-
-	// Login
-	req := newRequester()
-	fbl := newFbLogin(req)
-	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
-
-	// Process Years
-	if customYears == "" {
+	if flagContent == "" {
 		years = createMultiSelect("years", yearOptions)
 	} else {
-		years = strings.Split(customYears, ",")
-		fmt.Printf("Selected years: %s \n", strings.Join(years, ", "))
+		years = strings.Split(flagContent, ",")
+		fmt.Printf("? Which years: %s \n", strings.Join(years, ", "))
 	}
+	return years
+}
 
-	// Process Months
-	if customMonths == "" {
+func processMonths(flagContent string, actRead activityReader) {
+	months := []string{}
+	if flagContent == "" {
 		months = createMultiSelect("months", monthStrings)
 		actRead.selectedMonths = months
 	} else {
-		months = strings.Split(customMonths, ",")
+		months = strings.Split(flagContent, ",")
 		monthLabels := make(map[string]string)
 		monthLabels["1"] = "Jan"
 		monthLabels["01"] = "Jan"
@@ -597,23 +565,76 @@ func main() {
 		newMonths := []string{}
 		for _, month := range months {
 			if month, found := monthLabels[month]; found {
-				fmt.Printf("Found month: %s \n", month)
 				newMonths = append(newMonths, month)
 			}
 		}
-		fmt.Printf("Selected months: %s \n", strings.Join(newMonths, ", "))
+		fmt.Printf("? Which months: %s \n", strings.Join(newMonths, ", "))
 		actRead.selectedMonths = newMonths
 	}
+}
 
-	// Process Categories
+func processCategories(reader activityReader) []string {
 	categories := []string{}
 	if selectAllContent {
 		categories = categorySlice()
+		fmt.Printf("Selected content: %s \n", strings.Join(categories, ", "))
 	} else {
 		categories = createMultiSelect("categories", categorySlice())
 	}
 
-	// Delete
+	return categories
+}
+
+func main() {
+	flag.IntVar(&rateLimit, "rateLimit", 30000, "Wait this many milliseconds between requests.")
+	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
+	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
+	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to select.")
+	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
+	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
+	flag.Parse()
+	if rateLimit > 0 {
+		if limitSearch && limitDelete {
+			fmt.Printf("Waiting %d ms before search and delete requests.\n", rateLimit)
+		} else if limitSearch {
+			fmt.Printf("Waiting %d ms before search requests.\n", rateLimit)
+		} else if limitDelete {
+			fmt.Printf("Waiting %d ms before delete requests.\n", rateLimit)
+		}
+	}
+
+	// Login
+	req := newRequester()
+	fbl := newFbLogin(req)
+	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
+
+	// Flags validation
+
+	customYearsFlagValid := validateYearsFlag(customYears)
+	customMonthsFlagValid := validateMonthsFlag(customMonths)
+
+	if customYearsFlagValid {
+		if customYears == "all" {
+			customYears = "2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006"
+		}
+	} else {
+		fmt.Println("Invalid years passed through customYears flag.")
+		customYears = ""
+	}
+
+	if customMonthsFlagValid {
+		if customMonths == "all" {
+			customMonths = "01,02,03,04,05,06,07,08,09,10,11,12"
+		}
+	} else {
+		fmt.Println("Invalid months passed through customMonths flag.")
+		customMonths = ""
+	}
+
+	years := processYears(customYears)
+	processMonths(customMonths, actRead)
+	categories := processCategories(actRead)
+
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
 }
