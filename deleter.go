@@ -17,7 +17,6 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/cheggaaa/pb/v3"
 	"github.com/juju/persistent-cookiejar"
-	//"net/http/cookiejar"
 )
 
 const numRoutines int = 5
@@ -187,7 +186,6 @@ func (fbl *fbLogin) StoreProfileID(output string) {
 		panic(fmt.Sprintf("Unable to parse profile information from cookies. Try manually deleting the cookie file stored in %s", cookiejar.DefaultCookieFile()))
 	}
 	result := strings.Split(output, ";profile_id=")[1]
-	fmt.Println("Result:", result)
 	result = strings.Split(result, "&amp;")[0]
 	fbl.profileID = result
 }
@@ -527,70 +525,6 @@ func validateMonthsFlag(flagContent string) bool {
 	return re.MatchString(months) || flagContent == "all" || flagContent == ""
 }
 
-func processYears(flagContent string) []string {
-	years := []string{}
-	if flagContent == "" {
-		years = createMultiSelect("years", yearOptions)
-	} else {
-		years = strings.Split(flagContent, ",")
-		fmt.Printf("? Which years: %s \n", strings.Join(years, ", "))
-	}
-	return years
-}
-
-func processMonths(flagContent string, actRead activityReader) {
-	months := []string{}
-	if flagContent == "" {
-		months = createMultiSelect("months", monthStrings)
-		actRead.selectedMonths = months
-	} else {
-		months = strings.Split(flagContent, ",")
-		monthLabels := make(map[string]string)
-		monthLabels["1"] = "Jan"
-		monthLabels["01"] = "Jan"
-		monthLabels["2"] = "Feb"
-		monthLabels["02"] = "Feb"
-		monthLabels["3"] = "Mar"
-		monthLabels["03"] = "Mar"
-		monthLabels["4"] = "Apr"
-		monthLabels["04"] = "Apr"
-		monthLabels["5"] = "May"
-		monthLabels["05"] = "May"
-		monthLabels["6"] = "Jun"
-		monthLabels["06"] = "Jun"
-		monthLabels["7"] = "Jul"
-		monthLabels["07"] = "Jul"
-		monthLabels["8"] = "Aug"
-		monthLabels["08"] = "Aug"
-		monthLabels["9"] = "Sep"
-		monthLabels["09"] = "Sep"
-		monthLabels["10"] = "Oct"
-		monthLabels["11"] = "Nov"
-		monthLabels["12"] = "Dec"
-
-		newMonths := []string{}
-		for _, month := range months {
-			if month, found := monthLabels[month]; found {
-				newMonths = append(newMonths, month)
-			}
-		}
-		fmt.Printf("? Which months: %s \n", strings.Join(newMonths, ", "))
-		actRead.selectedMonths = newMonths
-	}
-}
-
-func processCategories(reader activityReader) []string {
-	categories := []string{}
-	if selectAllContent {
-		categories = categorySlice()
-		fmt.Printf("Selected content: %s \n", strings.Join(categories, ", "))
-	} else {
-		categories = createMultiSelect("categories", categorySlice())
-	}
-
-	return categories
-}
-
 func main() {
 	flag.IntVar(&rateLimit, "rateLimit", 30000, "Wait this many milliseconds between requests.")
 	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
@@ -637,9 +571,62 @@ func main() {
 		customMonths = ""
 	}
 
-	years := processYears(customYears)
-	processMonths(customMonths, actRead)
-	categories := processCategories(actRead)
+	// Data processing
+
+	years := []string{}
+	if customYears == "" {
+		years = createMultiSelect("years", yearOptions)
+	} else {
+		years = strings.Split(customYears, ",")
+		fmt.Printf("? Which years: %s \n", strings.Join(years, ", "))
+	}
+
+	months := []string{}
+	if customMonths == "" {
+		months = createMultiSelect("months", monthStrings)
+		actRead.selectedMonths = months
+	} else {
+		months = strings.Split(customMonths, ",")
+		monthLabels := make(map[string]string)
+		monthLabels["1"] = "Jan"
+		monthLabels["01"] = "Jan"
+		monthLabels["2"] = "Feb"
+		monthLabels["02"] = "Feb"
+		monthLabels["3"] = "Mar"
+		monthLabels["03"] = "Mar"
+		monthLabels["4"] = "Apr"
+		monthLabels["04"] = "Apr"
+		monthLabels["5"] = "May"
+		monthLabels["05"] = "May"
+		monthLabels["6"] = "Jun"
+		monthLabels["06"] = "Jun"
+		monthLabels["7"] = "Jul"
+		monthLabels["07"] = "Jul"
+		monthLabels["8"] = "Aug"
+		monthLabels["08"] = "Aug"
+		monthLabels["9"] = "Sep"
+		monthLabels["09"] = "Sep"
+		monthLabels["10"] = "Oct"
+		monthLabels["11"] = "Nov"
+		monthLabels["12"] = "Dec"
+
+		newMonths := []string{}
+		for _, month := range months {
+			if month, found := monthLabels[month]; found {
+				newMonths = append(newMonths, month)
+			}
+		}
+		fmt.Printf("? Which months: %s \n", strings.Join(newMonths, ", "))
+		actRead.selectedMonths = newMonths
+	}
+
+	categories := []string{}
+	if selectAllContent {
+		categories = categorySlice()
+		fmt.Printf("Selected content: %s \n", strings.Join(categories, ", "))
+	} else {
+		categories = createMultiSelect("categories", categorySlice())
+	}
 
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
