@@ -16,8 +16,8 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/cheggaaa/pb/v3"
-	//"github.com/juju/persistent-cookiejar"
-	"net/http/cookiejar"
+	"github.com/juju/persistent-cookiejar"
+	//"net/http/cookiejar"
 )
 
 const numRoutines int = 5
@@ -100,7 +100,7 @@ func retrieveRequestString(resp *http.Response, err error) string {
 	}
 	strBody := string(body)
 	if strings.Contains(strBody, "You can try again later") || strings.Contains(strBody, "temporarily blocked") {
-		panic("ratelimited, please open https://mbasic.facebook.com and navigate to your activity log to see more information.")
+		panic("Ratelimited, please open https://mbasic.facebook.com and navigate to your activity log to see more information.")
 	}
 	return strBody
 }
@@ -119,7 +119,7 @@ func newFbLogin(req *requester) *fbLogin {
 	if !fbl.IsLoggedIn() {
 		fbl.EnterInformation()
 		fbl.Login()
-		//req.jar.Save()
+		req.jar.Save()
 		if !fbl.IsLoggedIn() {
 			panic("Failed to login. Please open https://mbasic.facebook.com in a browser and login there. Facebook might requires an additional verification. Afterwards, you can try again.")
 		}
@@ -181,7 +181,13 @@ func (fbl *fbLogin) IsLoggedIn() bool {
 }
 
 func (fbl *fbLogin) StoreProfileID(output string) {
+	slice := strings.Split(output, ";profile_id=")
+	if len(slice) == 1 {
+		fbl.requester.jar.RemoveAll()
+		panic(fmt.Sprintf("Unable to parse profile information from cookies. Try manually deleting the cookie file stored in %s", cookiejar.DefaultCookieFile()))
+	}
 	result := strings.Split(output, ";profile_id=")[1]
+	fmt.Println("Result:", result)
 	result = strings.Split(result, "&amp;")[0]
 	fbl.profileID = result
 }
