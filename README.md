@@ -64,6 +64,6 @@ If you want to skip the manual terminal selection, feel free to use the followin
 |-------------------|----------|------------------------------------------------------------------------|---------------------------------------------------------|
 | -customYears      | `string` | Comma-separated years (YYYY) to select. Use `all` to select all years. | `-customYears="2006,2009,2020"` or `-customYears="all"` |
 | -customMonths     | `string` | Comma-separated months to select. Use `all` to select all months.      | `-customMonths="1,2,12` or `-customMonths="01,02,12"`   |
-| -selectAllContent | `bool`   | If set to `true` it will select all content without asking questions.  | `-selectAllContent=true`                                |                              |
+| -selectAllContent | `bool`   | If set to `true` it will select all content without asking questions.  | `-selectAllContent=true`                                |
 
 _Note: if invalid arguments are passed to the flags, a warning will appear and you will be asked to perform a manual selection._
