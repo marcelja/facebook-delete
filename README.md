@@ -51,8 +51,8 @@ Facebook will temp-block your activity log if you make too many requests too qui
 Usage examples:
 
 ```bash
-./deleter-linux -rateLimit 500 #Add a 500 ms delay
-./deleter-linux -rateLimit 500 -limitSearch=0 #Add a 500 ms delay, but not to search action
+./deleter-linux -rateLimit 500 # Add a 500 ms delay
+./deleter-linux -rateLimit 500 -limitSearch=0 # Add a 500 ms delay, but not to search action
 ./deleter-linux -rateLimit 500 -limitDelete=0 # Add a 500 ms delay, but not to deletion action
 ```
 

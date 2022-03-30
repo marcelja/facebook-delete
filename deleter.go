@@ -587,28 +587,29 @@ func main() {
 		actRead.selectedMonths = months
 	} else {
 		months = strings.Split(customMonths, ",")
-		monthLabels := make(map[string]string)
-		monthLabels["1"] = "Jan"
-		monthLabels["01"] = "Jan"
-		monthLabels["2"] = "Feb"
-		monthLabels["02"] = "Feb"
-		monthLabels["3"] = "Mar"
-		monthLabels["03"] = "Mar"
-		monthLabels["4"] = "Apr"
-		monthLabels["04"] = "Apr"
-		monthLabels["5"] = "May"
-		monthLabels["05"] = "May"
-		monthLabels["6"] = "Jun"
-		monthLabels["06"] = "Jun"
-		monthLabels["7"] = "Jul"
-		monthLabels["07"] = "Jul"
-		monthLabels["8"] = "Aug"
-		monthLabels["08"] = "Aug"
-		monthLabels["9"] = "Sep"
-		monthLabels["09"] = "Sep"
-		monthLabels["10"] = "Oct"
-		monthLabels["11"] = "Nov"
-		monthLabels["12"] = "Dec"
+		monthLabels := map[string]string{
+			"1":  "Jan",
+			"01": "Jan",
+			"2":  "Feb",
+			"02": "Feb",
+			"3":  "Mar",
+			"03": "Mar",
+			"4":  "Apr",
+			"04": "Apr",
+			"5":  "May",
+			"05": "May",
+			"6":  "Jun",
+			"06": "Jun",
+			"7":  "Jul",
+			"07": "Jul",
+			"8":  "Aug",
+			"08": "Aug",
+			"9":  "Sep",
+			"09": "Sep",
+			"10": "Oct",
+			"11": "Nov",
+			"12": "Dec",
+		}
 
 		newMonths := []string{}
 		for _, month := range months {
