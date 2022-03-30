@@ -4,17 +4,19 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
-	"github.com/cheggaaa/pb/v3"
-	"github.com/juju/persistent-cookiejar"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/cheggaaa/pb/v3"
+	"github.com/juju/persistent-cookiejar"
 )
 
 const numRoutines int = 5
@@ -48,6 +50,9 @@ var tokensInURLs = [...]string{"/removecontent", "/delete", "/report", "/events/
 var rateLimit int
 var limitSearch bool
 var limitDelete bool
+var customYears string
+var customMonths string
+var selectAllContent bool
 
 type requester struct {
 	client *http.Client
@@ -94,7 +99,7 @@ func retrieveRequestString(resp *http.Response, err error) string {
 	}
 	strBody := string(body)
 	if strings.Contains(strBody, "You can try again later") || strings.Contains(strBody, "temporarily blocked") {
-		panic("ratelimited, please open https://mbasic.facebook.com and navigate to your activity log to see more information.")
+		panic("Ratelimited, please open https://mbasic.facebook.com and navigate to your activity log to see more information.")
 	}
 	return strBody
 }
@@ -175,6 +180,11 @@ func (fbl *fbLogin) IsLoggedIn() bool {
 }
 
 func (fbl *fbLogin) StoreProfileID(output string) {
+	slice := strings.Split(output, ";profile_id=")
+	if len(slice) == 1 {
+		fbl.requester.jar.RemoveAll()
+		panic(fmt.Sprintf("Unable to parse profile information from cookies. Try manually deleting the cookie file stored in %s", cookiejar.DefaultCookieFile()))
+	}
 	result := strings.Split(output, ";profile_id=")[1]
 	result = strings.Split(result, "&amp;")[0]
 	fbl.profileID = result
@@ -503,10 +513,25 @@ func (del *deleter) DeleteElement(elem *deleteElement) {
 	}
 }
 
+func validateYearsFlag(flagContent string) bool {
+	years := strings.ReplaceAll(flagContent, " ", "")
+	re, _ := regexp.Compile("^(([\\d]{4})([,][\\d]{4})*)?$")
+	return re.MatchString(years) || flagContent == "all" || flagContent == ""
+}
+
+func validateMonthsFlag(flagContent string) bool {
+	months := strings.ReplaceAll(flagContent, " ", "")
+	re, _ := regexp.Compile("^((0?[1-9]|1[012])([,](0?[1-9]|1[012]))*)?$")
+	return re.MatchString(months) || flagContent == "all" || flagContent == ""
+}
+
 func main() {
-	flag.IntVar(&rateLimit, "rateLimit", 0, "Wait this many milliseconds between requests.")
+	flag.IntVar(&rateLimit, "rateLimit", 100, "Wait this many milliseconds between requests.")
 	flag.BoolVar(&limitSearch, "limitSearch", true, "Rate-limit searching for things to delete.")
 	flag.BoolVar(&limitDelete, "limitDelete", true, "Rate-limit deleting things.")
+	flag.StringVar(&customYears, "customYears", "", "Comma-separated years (YYYY) to select.")
+	flag.StringVar(&customMonths, "customMonths", "", "Comma-separated months (MM) to set.")
+	flag.BoolVar(&selectAllContent, "selectAllContent", false, "Don't ask content type, but select all.")
 	flag.Parse()
 	if rateLimit > 0 {
 		if limitSearch && limitDelete {
@@ -518,14 +543,91 @@ func main() {
 		}
 	}
 
+	// Login
 	req := newRequester()
 	fbl := newFbLogin(req)
 	actRead := activityReader{req, fbl, make([]deleteElement, 0), make([]string, 0)}
 
-	years := createMultiSelect("years", yearOptions)
-	months := createMultiSelect("months", monthStrings)
-	actRead.selectedMonths = months
-	categories := createMultiSelect("categories", categorySlice())
+	// Flags validation
+
+	customYearsFlagValid := validateYearsFlag(customYears)
+	customMonthsFlagValid := validateMonthsFlag(customMonths)
+
+	if customYearsFlagValid {
+		if customYears == "all" {
+			customYears = "2022,2021,2020,2019,2018,2017,2016,2015,2014,2013,2012,2011,2010,2009,2008,2007,2006"
+		}
+	} else {
+		fmt.Println("Invalid years passed through customYears flag.")
+		customYears = ""
+	}
+
+	if customMonthsFlagValid {
+		if customMonths == "all" {
+			customMonths = "01,02,03,04,05,06,07,08,09,10,11,12"
+		}
+	} else {
+		fmt.Println("Invalid months passed through customMonths flag.")
+		customMonths = ""
+	}
+
+	// Data processing
+
+	years := []string{}
+	if customYears == "" {
+		years = createMultiSelect("years", yearOptions)
+	} else {
+		years = strings.Split(customYears, ",")
+		fmt.Printf("? Which years: %s \n", strings.Join(years, ", "))
+	}
+
+	months := []string{}
+	if customMonths == "" {
+		months = createMultiSelect("months", monthStrings)
+		actRead.selectedMonths = months
+	} else {
+		months = strings.Split(customMonths, ",")
+		monthLabels := map[string]string{
+			"1":  "Jan",
+			"01": "Jan",
+			"2":  "Feb",
+			"02": "Feb",
+			"3":  "Mar",
+			"03": "Mar",
+			"4":  "Apr",
+			"04": "Apr",
+			"5":  "May",
+			"05": "May",
+			"6":  "Jun",
+			"06": "Jun",
+			"7":  "Jul",
+			"07": "Jul",
+			"8":  "Aug",
+			"08": "Aug",
+			"9":  "Sep",
+			"09": "Sep",
+			"10": "Oct",
+			"11": "Nov",
+			"12": "Dec",
+		}
+
+		newMonths := []string{}
+		for _, month := range months {
+			if month, found := monthLabels[month]; found {
+				newMonths = append(newMonths, month)
+			}
+		}
+		fmt.Printf("? Which months: %s \n", strings.Join(newMonths, ", "))
+		actRead.selectedMonths = newMonths
+	}
+
+	categories := []string{}
+	if selectAllContent {
+		categories = categorySlice()
+		fmt.Printf("Selected content: %s \n", strings.Join(categories, ", "))
+	} else {
+		categories = createMultiSelect("categories", categorySlice())
+	}
 
 	del := deleter{&actRead, req}
 	del.Delete(years, categories)
