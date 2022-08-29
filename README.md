@@ -2,7 +2,7 @@
 
 This program can be used to clean up a Facebook account without deleting the entire account.
 
-_Warning: Facebook has some measures in place to prevent high-frequency activity such as the one this tool provides. The current rate limit value has currently been set to 100 ms to avoid detection, but the delay might not be enough and this could still result in your activity log getting temporarily blocked. Please check out the [Rate-limiting](#rate-limiting) section if you want to increase/decrease this delay._
+_Warning: Facebook has some measures in place to prevent high-frequency activity such as the one this tool provides. The current rate limit value has currently been set to 1000 ms to avoid detection, but the delay might not be enough and this could still result in your activity log getting temporarily blocked. Please check out the [Rate-limiting](#rate-limiting) section if you want to increase/decrease this delay._
 
 _Note: Facebook has a very strange login process. Please open a GitHub issue if the program is not able to login. Here's a [workaround for the login process](https://github.com/marcelja/facebook-delete/wiki/Login-with-browser-cookie) which you can also use if your account has two-factor authentication enabled._
 
