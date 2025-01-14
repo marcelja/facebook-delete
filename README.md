@@ -1,3 +1,7 @@
+**The repo was based on mbasic.facebook.com which doesn't exist anymore.**
+
+Old readme:
+
 # Fast Facebook Activity Deletion
 
 This program can be used to clean up a Facebook account without deleting the entire account.
